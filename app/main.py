@@ -23,6 +23,30 @@ try:
 except Exception as e:
     logger.error("Failed to create database tables: %s", e)
 
+# Add lead_base_id column to leads if missing (fallback for migration 004)
+try:
+    from sqlalchemy import text
+
+    with engine.connect() as conn:
+        result = conn.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'leads' AND column_name = 'lead_base_id'"
+        ))
+        if not result.fetchone():
+            conn.execute(text(
+                "ALTER TABLE leads ADD COLUMN lead_base_id UUID "
+                "REFERENCES lead_bases(id) ON DELETE SET NULL"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_leads_lead_base_id ON leads (lead_base_id)"
+            ))
+            conn.commit()
+            logger.info("Added lead_base_id column to leads table")
+        else:
+            logger.info("lead_base_id column already exists in leads table")
+except Exception as e:
+    logger.error("Failed to add lead_base_id column: %s", e)
+
 app = FastAPI(
     title="Centro de Control - Multi-Tenant CRM Ingest",
     description="Backend multi-tenant para ingesta de datos de CRM con auto-creación de campos.",
