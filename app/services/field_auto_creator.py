@@ -39,7 +39,7 @@ def auto_create_fields(
         logger.info(
             "Auto-created field '%s' (type=%s) for account %s",
             key,
-            tipo.value,
+            tipo,
             cuenta_id,
         )
 
