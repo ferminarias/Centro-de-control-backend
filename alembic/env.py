@@ -12,9 +12,11 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override URL from env if available
+# Override URL from env if available (fix Railway's postgres:// prefix)
 db_url = os.getenv("DATABASE_URL")
 if db_url:
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
     config.set_main_option("sqlalchemy.url", db_url)
 
 target_metadata = Base.metadata
