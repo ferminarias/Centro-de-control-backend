@@ -72,7 +72,12 @@ def ingest_webhook(
     db.add(record)
     db.flush()
 
-    lead_base_id = evaluate_routing(db, account.id, payload)
+    try:
+        lead_base_id = evaluate_routing(db, account.id, payload)
+        logger.info("Routing result for account %s: lead_base_id=%s", account.id, lead_base_id)
+    except Exception as e:
+        logger.error("Routing failed for account %s: %s", account.id, e)
+        lead_base_id = None
 
     lead = Lead(
         cuenta_id=account.id,
@@ -85,7 +90,7 @@ def ingest_webhook(
     db.refresh(record)
     db.refresh(lead)
 
-    logger.info("Record %s and Lead %s created for account %s", record.id, lead.id, account.id)
+    logger.info("Record %s and Lead %s created (base=%s) for account %s", record.id, lead.id, lead_base_id, account.id)
 
     return IngestResponse(
         success=True,

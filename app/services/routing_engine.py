@@ -38,6 +38,7 @@ def evaluate_routing(db: Session, cuenta_id: uuid.UUID, payload: dict[str, Any])
         db.query(LeadBase)
         .options(joinedload(LeadBase.routing_rules))
         .filter(LeadBase.cuenta_id == cuenta_id)
+        .unique()
         .all()
     )
 
