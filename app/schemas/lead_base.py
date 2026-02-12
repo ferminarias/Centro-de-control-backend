@@ -59,3 +59,12 @@ class RoutingRuleResponse(BaseModel):
 class RoutingRuleListResponse(BaseModel):
     items: list[RoutingRuleResponse]
     total: int
+
+
+class MoveLeadsRequest(BaseModel):
+    lead_ids: list[uuid.UUID]
+    target_base_id: uuid.UUID
+
+
+class MoveLeadsResponse(BaseModel):
+    moved: int

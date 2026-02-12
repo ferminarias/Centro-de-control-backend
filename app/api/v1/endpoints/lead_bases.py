@@ -17,6 +17,8 @@ from app.schemas.lead_base import (
     LeadBaseListResponse,
     LeadBaseResponse,
     LeadBaseUpdate,
+    MoveLeadsRequest,
+    MoveLeadsResponse,
     RoutingRuleCreate,
     RoutingRuleListResponse,
     RoutingRuleResponse,
@@ -324,3 +326,29 @@ def list_leads_by_base(
         })
 
     return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+
+# --- Move Leads ---
+
+
+@router.post(
+    "/bases/move-leads",
+    response_model=MoveLeadsResponse,
+    summary="Move leads to another base",
+)
+def move_leads(
+    body: MoveLeadsRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    target_base = db.query(LeadBase).filter(LeadBase.id == body.target_base_id).first()
+    if not target_base:
+        raise HTTPException(status_code=404, detail="Target base not found")
+
+    moved = (
+        db.query(Lead)
+        .filter(Lead.id.in_(body.lead_ids), Lead.cuenta_id == target_base.cuenta_id)
+        .update({"lead_base_id": target_base.id}, synchronize_session="fetch")
+    )
+    db.commit()
+
+    return {"moved": moved}
