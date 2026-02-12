@@ -2,7 +2,7 @@ import logging
 import uuid
 from typing import Any
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, subqueryload
 
 from app.models.lead_base import LeadBase
 
@@ -36,9 +36,8 @@ def evaluate_routing(db: Session, cuenta_id: uuid.UUID, payload: dict[str, Any])
     """Evaluate routing rules and return the matching lead_base_id. Always returns a base."""
     bases = (
         db.query(LeadBase)
-        .options(joinedload(LeadBase.routing_rules))
+        .options(subqueryload(LeadBase.routing_rules))
         .filter(LeadBase.cuenta_id == cuenta_id)
-        .unique()
         .all()
     )
 
