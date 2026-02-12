@@ -22,6 +22,10 @@ class Lead(Base):
         ForeignKey("records.id", ondelete="CASCADE"),
         unique=True,
     )
+    lead_base_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("lead_bases.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
     datos: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
@@ -29,3 +33,4 @@ class Lead(Base):
 
     account: Mapped["Account"] = relationship(back_populates="leads")  # noqa: F821
     record: Mapped["Record"] = relationship(back_populates="lead")  # noqa: F821
+    lead_base: Mapped["LeadBase | None"] = relationship(back_populates="leads")  # noqa: F821

@@ -11,6 +11,7 @@ class LeadResponse(BaseModel):
     id: uuid.UUID
     cuenta_id: uuid.UUID
     record_id: uuid.UUID
+    lead_base_id: uuid.UUID | None = None
     datos: dict[str, Any]
     created_at: datetime
 

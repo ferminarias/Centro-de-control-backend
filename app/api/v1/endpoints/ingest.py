@@ -11,6 +11,7 @@ from app.models.lead import Lead
 from app.models.record import Record
 from app.schemas.ingest import IngestResponse
 from app.services.field_auto_creator import auto_create_fields, detect_unknown_fields
+from app.services.routing_engine import evaluate_routing
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -71,10 +72,13 @@ def ingest_webhook(
     db.add(record)
     db.flush()
 
+    lead_base_id = evaluate_routing(db, account.id, payload)
+
     lead = Lead(
         cuenta_id=account.id,
         record_id=record.id,
         datos=payload,
+        lead_base_id=lead_base_id,
     )
     db.add(lead)
     db.commit()
@@ -87,6 +91,7 @@ def ingest_webhook(
         success=True,
         record_id=record.id,
         lead_id=lead.id,
+        lead_base_id=lead_base_id,
         unknown_fields=unknown_fields,
         auto_create_enabled=account.auto_crear_campos,
         fields_created=fields_created or None,
