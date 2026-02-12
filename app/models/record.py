@@ -26,4 +26,4 @@ class Record(Base):
     )
 
     account: Mapped["Account"] = relationship(back_populates="records")  # noqa: F821
-    lead: Mapped["Lead"] = relationship(back_populates="record")  # noqa: F821
+    lead: Mapped["Lead | None"] = relationship(back_populates="record")  # noqa: F821
