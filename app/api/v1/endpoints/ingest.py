@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.account import Account
 from app.models.field import CustomField
+from app.models.lead import Lead
 from app.models.record import Record
 from app.schemas.ingest import IngestResponse
 from app.services.field_auto_creator import auto_create_fields, detect_unknown_fields
@@ -68,14 +69,24 @@ def ingest_webhook(
         },
     )
     db.add(record)
+    db.flush()
+
+    lead = Lead(
+        cuenta_id=account.id,
+        record_id=record.id,
+        datos=payload,
+    )
+    db.add(lead)
     db.commit()
     db.refresh(record)
+    db.refresh(lead)
 
-    logger.info("Record %s created for account %s", record.id, account.id)
+    logger.info("Record %s and Lead %s created for account %s", record.id, lead.id, account.id)
 
     return IngestResponse(
         success=True,
         record_id=record.id,
+        lead_id=lead.id,
         unknown_fields=unknown_fields,
         auto_create_enabled=account.auto_crear_campos,
         fields_created=fields_created or None,

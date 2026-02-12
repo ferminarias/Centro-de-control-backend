@@ -8,8 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
-class Record(Base):
-    __tablename__ = "records"
+class Lead(Base):
+    __tablename__ = "leads"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -17,13 +17,15 @@ class Record(Base):
     cuenta_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"), index=True
     )
-    datos: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    metadata_: Mapped[dict | None] = mapped_column(
-        "metadata", JSONB, nullable=True
+    record_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("records.id", ondelete="CASCADE"),
+        unique=True,
     )
+    datos: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
 
-    account: Mapped["Account"] = relationship(back_populates="records")  # noqa: F821
-    lead: Mapped["Lead"] = relationship(back_populates="record")  # noqa: F821
+    account: Mapped["Account"] = relationship(back_populates="leads")  # noqa: F821
+    record: Mapped["Record"] = relationship(back_populates="lead")  # noqa: F821

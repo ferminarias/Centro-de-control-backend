@@ -33,3 +33,6 @@ class Account(Base):
     records: Mapped[list["Record"]] = relationship(  # noqa: F821
         back_populates="account", cascade="all, delete-orphan"
     )
+    leads: Mapped[list["Lead"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
