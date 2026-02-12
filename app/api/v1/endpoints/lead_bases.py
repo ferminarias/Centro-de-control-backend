@@ -3,6 +3,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from sqlalchemy import func
+
 from app.core.database import get_db
 from app.core.security import verify_admin_key
 from app.models.account import Account
@@ -83,7 +85,27 @@ def list_lead_bases(
         .order_by(LeadBase.created_at)
         .all()
     )
-    return {"items": bases, "total": len(bases)}
+
+    # Count leads per base
+    lead_counts = dict(
+        db.query(Lead.lead_base_id, func.count(Lead.id))
+        .filter(Lead.lead_base_id.in_([b.id for b in bases]))
+        .group_by(Lead.lead_base_id)
+        .all()
+    )
+
+    items = []
+    for base in bases:
+        items.append({
+            "id": base.id,
+            "cuenta_id": base.cuenta_id,
+            "nombre": base.nombre,
+            "es_default": base.es_default,
+            "total_leads": lead_counts.get(base.id, 0),
+            "created_at": base.created_at,
+        })
+
+    return {"items": items, "total": len(items)}
 
 
 @router.get(
@@ -282,10 +304,23 @@ def list_leads_by_base(
 
     query = db.query(Lead).filter(Lead.lead_base_id == base_id)
     total = query.count()
-    items = (
+    leads = (
         query.order_by(Lead.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
     )
+
+    items = []
+    for lead in leads:
+        items.append({
+            "id": lead.id,
+            "cuenta_id": lead.cuenta_id,
+            "record_id": lead.record_id,
+            "lead_base_id": lead.lead_base_id,
+            "base_nombre": base.nombre,
+            "datos": lead.datos,
+            "created_at": lead.created_at,
+        })
+
     return {"items": items, "total": total, "page": page, "page_size": page_size}

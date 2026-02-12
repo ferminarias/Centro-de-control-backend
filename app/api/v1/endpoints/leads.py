@@ -3,10 +3,13 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from sqlalchemy.orm import Session, joinedload
+
 from app.core.database import get_db
 from app.core.security import verify_admin_key
 from app.models.account import Account
 from app.models.lead import Lead
+from app.models.lead_base import LeadBase
 from app.schemas.lead import LeadListResponse, LeadResponse
 
 router = APIRouter(dependencies=[Depends(verify_admin_key)])
@@ -29,12 +32,32 @@ def list_leads(
 
     query = db.query(Lead).filter(Lead.cuenta_id == account_id)
     total = query.count()
-    items = (
+    leads = (
         query.order_by(Lead.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
     )
+
+    # Fetch base names for leads that have a base assigned
+    base_ids = {l.lead_base_id for l in leads if l.lead_base_id}
+    base_names: dict[uuid.UUID, str] = {}
+    if base_ids:
+        bases = db.query(LeadBase.id, LeadBase.nombre).filter(LeadBase.id.in_(base_ids)).all()
+        base_names = {b.id: b.nombre for b in bases}
+
+    items = []
+    for lead in leads:
+        items.append({
+            "id": lead.id,
+            "cuenta_id": lead.cuenta_id,
+            "record_id": lead.record_id,
+            "lead_base_id": lead.lead_base_id,
+            "base_nombre": base_names.get(lead.lead_base_id) if lead.lead_base_id else None,
+            "datos": lead.datos,
+            "created_at": lead.created_at,
+        })
+
     return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 
@@ -46,8 +69,23 @@ def list_leads(
 def get_lead(
     lead_id: uuid.UUID,
     db: Session = Depends(get_db),
-) -> Lead:
+) -> dict:
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    return lead
+
+    base_nombre = None
+    if lead.lead_base_id:
+        base = db.query(LeadBase.nombre).filter(LeadBase.id == lead.lead_base_id).first()
+        if base:
+            base_nombre = base.nombre
+
+    return {
+        "id": lead.id,
+        "cuenta_id": lead.cuenta_id,
+        "record_id": lead.record_id,
+        "lead_base_id": lead.lead_base_id,
+        "base_nombre": base_nombre,
+        "datos": lead.datos,
+        "created_at": lead.created_at,
+    }

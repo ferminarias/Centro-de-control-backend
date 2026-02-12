@@ -21,6 +21,7 @@ class LeadBaseResponse(BaseModel):
     cuenta_id: uuid.UUID
     nombre: str
     es_default: bool
+    total_leads: int = 0
     created_at: datetime
 
 
