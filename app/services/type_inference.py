@@ -1,33 +1,30 @@
 import re
 from typing import Any
 
-from app.models.field import FieldType
-
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PHONE_RE = re.compile(r"^\+?\d[\d\s\-()]{6,}$")
 
 
-def infer_type(value: Any) -> FieldType:
-    """Infer the FieldType from a Python value."""
+def infer_type(value: Any) -> str:
+    """Infer the field type from a Python value. Returns lowercase string."""
     if isinstance(value, bool):
-        return FieldType.BOOLEAN
+        return "boolean"
     if isinstance(value, (int, float)):
-        return FieldType.NUMBER
+        return "number"
     if not isinstance(value, str) or not value.strip():
-        return FieldType.STRING
+        return "string"
 
     val = value.strip()
 
     if EMAIL_RE.match(val):
-        return FieldType.EMAIL
+        return "email"
     if PHONE_RE.match(val):
-        return FieldType.PHONE
+        return "phone"
 
-    # Try numeric string
     try:
         float(val)
-        return FieldType.NUMBER
+        return "number"
     except ValueError:
         pass
 
-    return FieldType.STRING
+    return "string"

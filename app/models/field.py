@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,9 +31,7 @@ class CustomField(Base):
         UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"), index=True
     )
     nombre_campo: Mapped[str] = mapped_column(String(255), nullable=False)
-    tipo_dato: Mapped[FieldType] = mapped_column(
-        Enum(FieldType), default=FieldType.STRING
-    )
+    tipo_dato: Mapped[str] = mapped_column(String(20), default="string")
     descripcion: Mapped[str | None] = mapped_column(String(500), nullable=True)
     es_requerido: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
