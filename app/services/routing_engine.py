@@ -11,8 +11,29 @@ logger = logging.getLogger(__name__)
 VALID_OPERATORS = {"equals", "not_equals", "contains", "greater_than", "less_than"}
 
 
-def evaluate_routing(db: Session, cuenta_id: uuid.UUID, payload: dict[str, Any]) -> uuid.UUID | None:
-    """Evaluate routing rules and return the matching lead_base_id."""
+def _get_or_create_default_base(db: Session, cuenta_id: uuid.UUID) -> LeadBase:
+    """Get the default base for an account, creating one if it doesn't exist."""
+    default_base = (
+        db.query(LeadBase)
+        .filter(LeadBase.cuenta_id == cuenta_id, LeadBase.es_default.is_(True))
+        .first()
+    )
+    if default_base:
+        return default_base
+
+    default_base = LeadBase(
+        cuenta_id=cuenta_id,
+        nombre="Default",
+        es_default=True,
+    )
+    db.add(default_base)
+    db.flush()
+    logger.info("Auto-created default base for account %s", cuenta_id)
+    return default_base
+
+
+def evaluate_routing(db: Session, cuenta_id: uuid.UUID, payload: dict[str, Any]) -> uuid.UUID:
+    """Evaluate routing rules and return the matching lead_base_id. Always returns a base."""
     bases = (
         db.query(LeadBase)
         .options(joinedload(LeadBase.routing_rules))
@@ -20,13 +41,9 @@ def evaluate_routing(db: Session, cuenta_id: uuid.UUID, payload: dict[str, Any])
         .all()
     )
 
-    if not bases:
-        return None
-
     default_base: LeadBase | None = None
-
-    # Sort non-default bases by their rules' priority (min priority of rules)
     non_default_bases: list[LeadBase] = []
+
     for base in bases:
         if base.es_default:
             default_base = base
@@ -45,11 +62,12 @@ def evaluate_routing(db: Session, cuenta_id: uuid.UUID, payload: dict[str, Any])
             logger.info("Lead routed to base '%s' (%s)", base.nombre, base.id)
             return base.id
 
-    if default_base:
-        logger.info("Lead routed to default base '%s' (%s)", default_base.nombre, default_base.id)
-        return default_base.id
+    # Always fall back to default base, auto-creating if needed
+    if not default_base:
+        default_base = _get_or_create_default_base(db, cuenta_id)
 
-    return None
+    logger.info("Lead routed to default base '%s' (%s)", default_base.nombre, default_base.id)
+    return default_base.id
 
 
 def _evaluate_condition(campo: str, operador: str, valor: str, payload: dict[str, Any]) -> bool:
