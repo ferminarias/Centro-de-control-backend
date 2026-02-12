@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD sh -c "alembic stamp 002 2>/dev/null; timeout 30 alembic upgrade head; uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+CMD sh -c "timeout 30 alembic upgrade head 2>&1 || true; uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
