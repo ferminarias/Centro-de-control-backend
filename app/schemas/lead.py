@@ -9,6 +9,7 @@ class LeadResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    id_lead: int | None = None
     cuenta_id: uuid.UUID
     record_id: uuid.UUID
     lead_base_id: uuid.UUID | None = None
@@ -24,3 +25,9 @@ class LeadListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class BulkUpdateResponse(BaseModel):
+    updated: int
+    not_found_ids: list[int]
+    errors: list[str]

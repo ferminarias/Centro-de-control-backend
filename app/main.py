@@ -71,6 +71,38 @@ try:
 except Exception as e:
     logger.error("Failed to add lote_id column: %s", e)
 
+# Add id_lead column to leads if missing (fallback for migration 008)
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'leads' AND column_name = 'id_lead'"
+        ))
+        if not result.fetchone():
+            conn.execute(text(
+                "ALTER TABLE leads ADD COLUMN id_lead INTEGER"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_leads_id_lead ON leads (id_lead)"
+            ))
+            # Backfill existing leads
+            conn.execute(text("""
+                UPDATE leads
+                SET id_lead = sub.rn
+                FROM (
+                    SELECT id,
+                           ROW_NUMBER() OVER (PARTITION BY cuenta_id ORDER BY created_at) AS rn
+                    FROM leads
+                ) sub
+                WHERE leads.id = sub.id
+            """))
+            conn.commit()
+            logger.info("Added id_lead column to leads table and backfilled")
+        else:
+            logger.info("id_lead column already exists in leads table")
+except Exception as e:
+    logger.error("Failed to add id_lead column: %s", e)
+
 app = FastAPI(
     title="Centro de Control - Multi-Tenant CRM Ingest",
     description="Backend multi-tenant para ingesta de datos de CRM con auto-creación de campos.",

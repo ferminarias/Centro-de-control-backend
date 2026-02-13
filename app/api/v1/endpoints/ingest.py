@@ -12,6 +12,7 @@ from app.models.record import Record
 from app.schemas.ingest import IngestResponse
 from app.services.automation_engine import run_automations
 from app.services.field_auto_creator import auto_create_fields, detect_unknown_fields
+from app.services.lead_id_generator import next_id_lead
 from app.services.routing_engine import evaluate_routing
 from app.services.webhook_dispatcher import dispatch_event
 
@@ -86,6 +87,7 @@ def ingest_webhook(
         record_id=record.id,
         datos=payload,
         lead_base_id=lead_base_id,
+        id_lead=next_id_lead(db, account.id),
     )
     db.add(lead)
     db.commit()

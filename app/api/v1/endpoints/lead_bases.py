@@ -317,6 +317,7 @@ def list_leads_by_base(
     for lead in leads:
         items.append({
             "id": lead.id,
+            "id_lead": lead.id_lead,
             "cuenta_id": lead.cuenta_id,
             "record_id": lead.record_id,
             "lead_base_id": lead.lead_base_id,

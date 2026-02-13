@@ -23,6 +23,7 @@ from app.schemas.lote import (
     LoteResponse,
 )
 from app.services.field_auto_creator import auto_create_fields
+from app.services.lead_id_generator import next_id_lead
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(verify_admin_key)])
@@ -145,6 +146,7 @@ def import_lote(
             record_id=record.id,
             datos=datos,
             lote_id=lote.id,
+            id_lead=next_id_lead(db, account.id),
         )
         db.add(lead)
         count += 1
@@ -371,6 +373,7 @@ def list_lote_leads(
     for lead in leads:
         items.append({
             "id": lead.id,
+            "id_lead": lead.id_lead,
             "cuenta_id": lead.cuenta_id,
             "record_id": lead.record_id,
             "lead_base_id": lead.lead_base_id,
