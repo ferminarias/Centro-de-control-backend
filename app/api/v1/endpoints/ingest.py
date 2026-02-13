@@ -94,13 +94,18 @@ def ingest_webhook(
 
     logger.info("Record %s and Lead %s created (base=%s) for account %s", record.id, lead.id, lead_base_id, account.id)
 
-    # Fire webhooks & automations (best-effort, failures won't affect the response)
+    # Fire webhooks (best-effort, independent of automations)
     try:
         event_payload = {"lead_id": str(lead.id), "record_id": str(record.id), "datos": payload}
         dispatch_event(db, account.id, "lead_created", event_payload)
+    except Exception as e:
+        logger.error("Webhook dispatch failed for account %s: %s", account.id, e)
+
+    # Fire automations (best-effort, independent of webhooks)
+    try:
         run_automations(db, account.id, "lead_created", lead=lead)
     except Exception as e:
-        logger.error("Post-ingest hooks failed for account %s: %s", account.id, e)
+        logger.error("Automations failed for account %s: %s", account.id, e)
 
     return IngestResponse(
         success=True,

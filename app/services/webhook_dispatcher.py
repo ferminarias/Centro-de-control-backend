@@ -101,16 +101,20 @@ def _deliver(
         logger.warning("Webhook %s delivery failed: %s", webhook.id, exc)
 
     if log:
-        entry = WebhookLog(
-            webhook_id=webhook.id,
-            evento=evento,
-            payload=payload,
-            status_code=result["status_code"],
-            response_body=result["response_body"],
-            error=result["error"],
-            duration_ms=result["duration_ms"],
-        )
-        db.add(entry)
-        db.commit()
+        try:
+            entry = WebhookLog(
+                webhook_id=webhook.id,
+                evento=evento,
+                payload=payload,
+                status_code=result["status_code"],
+                response_body=result["response_body"],
+                error=result["error"],
+                duration_ms=result["duration_ms"],
+            )
+            db.add(entry)
+            db.commit()
+        except Exception as log_exc:
+            logger.error("Failed to write webhook log: %s", log_exc)
+            db.rollback()
 
     return result

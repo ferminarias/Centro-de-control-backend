@@ -15,7 +15,7 @@ import uuid
 from typing import Any
 
 import httpx
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.automation import Automation, AutomationAction, AutomationCondition, AutomationLog
 from app.models.lead import Lead
@@ -38,6 +38,7 @@ def run_automations(
     """Evaluate all active automations for this account + trigger type."""
     automations = (
         db.query(Automation)
+        .options(joinedload(Automation.conditions), joinedload(Automation.actions))
         .filter(
             Automation.cuenta_id == cuenta_id,
             Automation.trigger_tipo == evento,
@@ -83,16 +84,21 @@ def _execute_automation(
         db.commit()
 
     except Exception as exc:
-        logger.error("Automation %s failed: %s", auto.id, exc)
-        log_entry = AutomationLog(
-            automation_id=auto.id,
-            lead_id=lead.id if lead else None,
-            trigger_evento=auto.trigger_tipo,
-            conditions_passed=False,
-            error=str(exc)[:2000],
-        )
-        db.add(log_entry)
-        db.commit()
+        logger.error("Automation %s failed: %s", auto.id, exc, exc_info=True)
+        try:
+            db.rollback()
+            log_entry = AutomationLog(
+                automation_id=auto.id,
+                lead_id=lead.id if lead else None,
+                trigger_evento=auto.trigger_tipo,
+                conditions_passed=False,
+                error=str(exc)[:2000],
+            )
+            db.add(log_entry)
+            db.commit()
+        except Exception as log_exc:
+            logger.error("Failed to write automation error log: %s", log_exc)
+            db.rollback()
 
 
 def _evaluate_conditions(conditions: list[AutomationCondition], datos: dict) -> bool:
