@@ -42,3 +42,9 @@ class Account(Base):
     lotes: Mapped[list["Lote"]] = relationship(  # noqa: F821
         back_populates="account", cascade="all, delete-orphan"
     )
+    roles: Mapped[list["Role"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    users: Mapped[list["User"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )

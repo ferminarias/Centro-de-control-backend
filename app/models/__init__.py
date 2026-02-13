@@ -4,6 +4,11 @@ from app.models.lead import Lead
 from app.models.lead_base import LeadBase
 from app.models.lote import Lote
 from app.models.record import Record
+from app.models.role import Role
 from app.models.routing_rule import RoutingRule
+from app.models.user import User
 
-__all__ = ["Account", "CustomField", "FieldType", "Lead", "LeadBase", "Lote", "Record", "RoutingRule"]
+__all__ = [
+    "Account", "CustomField", "FieldType", "Lead", "LeadBase",
+    "Lote", "Record", "Role", "RoutingRule", "User",
+]
