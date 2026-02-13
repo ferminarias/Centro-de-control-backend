@@ -47,6 +47,30 @@ try:
 except Exception as e:
     logger.error("Failed to add lead_base_id column: %s", e)
 
+# Add lote_id column to leads if missing (fallback for migration 005)
+try:
+    from sqlalchemy import text as _text
+
+    with engine.connect() as conn:
+        result = conn.execute(_text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'leads' AND column_name = 'lote_id'"
+        ))
+        if not result.fetchone():
+            conn.execute(_text(
+                "ALTER TABLE leads ADD COLUMN lote_id UUID "
+                "REFERENCES lotes(id) ON DELETE SET NULL"
+            ))
+            conn.execute(_text(
+                "CREATE INDEX IF NOT EXISTS ix_leads_lote_id ON leads (lote_id)"
+            ))
+            conn.commit()
+            logger.info("Added lote_id column to leads table")
+        else:
+            logger.info("lote_id column already exists in leads table")
+except Exception as e:
+    logger.error("Failed to add lote_id column: %s", e)
+
 app = FastAPI(
     title="Centro de Control - Multi-Tenant CRM Ingest",
     description="Backend multi-tenant para ingesta de datos de CRM con auto-creación de campos.",

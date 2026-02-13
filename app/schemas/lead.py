@@ -13,6 +13,8 @@ class LeadResponse(BaseModel):
     record_id: uuid.UUID
     lead_base_id: uuid.UUID | None = None
     base_nombre: str | None = None
+    lote_id: uuid.UUID | None = None
+    lote_nombre: str | None = None
     datos: dict[str, Any]
     created_at: datetime
 

@@ -10,6 +10,7 @@ from app.core.security import verify_admin_key
 from app.models.account import Account
 from app.models.lead import Lead
 from app.models.lead_base import LeadBase
+from app.models.lote import Lote
 from app.schemas.lead import LeadListResponse, LeadResponse
 
 router = APIRouter(dependencies=[Depends(verify_admin_key)])
@@ -46,6 +47,13 @@ def list_leads(
         bases = db.query(LeadBase.id, LeadBase.nombre).filter(LeadBase.id.in_(base_ids)).all()
         base_names = {b.id: b.nombre for b in bases}
 
+    # Fetch lote names for leads that have a lote assigned
+    lote_ids = {l.lote_id for l in leads if l.lote_id}
+    lote_names: dict[uuid.UUID, str] = {}
+    if lote_ids:
+        lotes = db.query(Lote.id, Lote.nombre).filter(Lote.id.in_(lote_ids)).all()
+        lote_names = {lo.id: lo.nombre for lo in lotes}
+
     items = []
     for lead in leads:
         items.append({
@@ -54,6 +62,8 @@ def list_leads(
             "record_id": lead.record_id,
             "lead_base_id": lead.lead_base_id,
             "base_nombre": base_names.get(lead.lead_base_id) if lead.lead_base_id else None,
+            "lote_id": lead.lote_id,
+            "lote_nombre": lote_names.get(lead.lote_id) if lead.lote_id else None,
             "datos": lead.datos,
             "created_at": lead.created_at,
         })
@@ -80,12 +90,20 @@ def get_lead(
         if base:
             base_nombre = base.nombre
 
+    lote_nombre = None
+    if lead.lote_id:
+        lote = db.query(Lote.nombre).filter(Lote.id == lead.lote_id).first()
+        if lote:
+            lote_nombre = lote.nombre
+
     return {
         "id": lead.id,
         "cuenta_id": lead.cuenta_id,
         "record_id": lead.record_id,
         "lead_base_id": lead.lead_base_id,
         "base_nombre": base_nombre,
+        "lote_id": lead.lote_id,
+        "lote_nombre": lote_nombre,
         "datos": lead.datos,
         "created_at": lead.created_at,
     }
