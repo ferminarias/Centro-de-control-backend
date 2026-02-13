@@ -48,3 +48,9 @@ class Account(Base):
     users: Mapped[list["User"]] = relationship(  # noqa: F821
         back_populates="account", cascade="all, delete-orphan"
     )
+    webhooks: Mapped[list["Webhook"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    automations: Mapped[list["Automation"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )

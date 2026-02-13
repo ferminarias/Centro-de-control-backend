@@ -39,6 +39,16 @@ ALL_PERMISSIONS: list[str] = [
     "fields:delete",
     # Records
     "records:read",
+    # Webhooks
+    "webhooks:read",
+    "webhooks:create",
+    "webhooks:update",
+    "webhooks:delete",
+    # Automations
+    "automations:read",
+    "automations:create",
+    "automations:update",
+    "automations:delete",
     # Account settings
     "settings:read",
     "settings:update",

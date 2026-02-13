@@ -10,8 +10,10 @@ from app.models.field import CustomField
 from app.models.lead import Lead
 from app.models.record import Record
 from app.schemas.ingest import IngestResponse
+from app.services.automation_engine import run_automations
 from app.services.field_auto_creator import auto_create_fields, detect_unknown_fields
 from app.services.routing_engine import evaluate_routing
+from app.services.webhook_dispatcher import dispatch_event
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -91,6 +93,14 @@ def ingest_webhook(
     db.refresh(lead)
 
     logger.info("Record %s and Lead %s created (base=%s) for account %s", record.id, lead.id, lead_base_id, account.id)
+
+    # Fire webhooks & automations (best-effort, failures won't affect the response)
+    try:
+        event_payload = {"lead_id": str(lead.id), "record_id": str(record.id), "datos": payload}
+        dispatch_event(db, account.id, "lead_created", event_payload)
+        run_automations(db, account.id, "lead_created", lead=lead)
+    except Exception as e:
+        logger.error("Post-ingest hooks failed for account %s: %s", account.id, e)
 
     return IngestResponse(
         success=True,

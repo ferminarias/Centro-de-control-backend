@@ -12,3 +12,4 @@ python-multipart==0.0.18
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
 PyJWT==2.9.0
+httpx==0.28.1

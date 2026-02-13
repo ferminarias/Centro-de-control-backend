@@ -1,4 +1,5 @@
 from app.models.account import Account
+from app.models.automation import Automation, AutomationAction, AutomationCondition, AutomationLog
 from app.models.field import CustomField, FieldType
 from app.models.lead import Lead
 from app.models.lead_base import LeadBase
@@ -7,8 +8,10 @@ from app.models.record import Record
 from app.models.role import Role
 from app.models.routing_rule import RoutingRule
 from app.models.user import User
+from app.models.webhook import Webhook, WebhookLog
 
 __all__ = [
-    "Account", "CustomField", "FieldType", "Lead", "LeadBase",
-    "Lote", "Record", "Role", "RoutingRule", "User",
+    "Account", "Automation", "AutomationAction", "AutomationCondition", "AutomationLog",
+    "CustomField", "FieldType", "Lead", "LeadBase", "Lote", "Record",
+    "Role", "RoutingRule", "User", "Webhook", "WebhookLog",
 ]

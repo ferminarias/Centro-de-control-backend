@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
-    accounts, auth, fields, ingest, lead_bases, leads, lotes, records, roles, users,
+    accounts, auth, automations, fields, ingest, lead_bases, leads, lotes,
+    records, roles, users, webhooks,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -18,4 +19,6 @@ api_router.include_router(lead_bases.router, prefix="/admin", tags=["Admin - Lea
 api_router.include_router(lotes.router, prefix="/admin", tags=["Admin - Lotes"])
 api_router.include_router(roles.router, prefix="/admin", tags=["Admin - Roles"])
 api_router.include_router(users.router, prefix="/admin", tags=["Admin - Users"])
+api_router.include_router(webhooks.router, prefix="/admin", tags=["Admin - Webhooks"])
+api_router.include_router(automations.router, prefix="/admin", tags=["Admin - Automations"])
 api_router.include_router(records.router, prefix="/admin", tags=["Admin - Records"])
