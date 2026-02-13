@@ -8,10 +8,16 @@ from app.models.record import Record
 from app.models.role import Role
 from app.models.routing_rule import RoutingRule
 from app.models.user import User
+from app.models.voip import (
+    Agent, CallEvent, CallRecord, Campaign, CampaignAgent, CampaignLead,
+    Disposition, DncEntry, PbxNode, SipProvider, SipTrunk,
+)
 from app.models.webhook import Webhook, WebhookLog
 
 __all__ = [
-    "Account", "Automation", "AutomationAction", "AutomationCondition", "AutomationLog",
-    "CustomField", "FieldType", "Lead", "LeadBase", "Lote", "Record",
-    "Role", "RoutingRule", "User", "Webhook", "WebhookLog",
+    "Account", "Agent", "Automation", "AutomationAction", "AutomationCondition", "AutomationLog",
+    "CallEvent", "CallRecord", "Campaign", "CampaignAgent", "CampaignLead",
+    "CustomField", "Disposition", "DncEntry", "FieldType",
+    "Lead", "LeadBase", "Lote", "PbxNode", "Record",
+    "Role", "RoutingRule", "SipProvider", "SipTrunk", "User", "Webhook", "WebhookLog",
 ]

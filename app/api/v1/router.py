@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     accounts, auth, automations, fields, ingest, lead_bases, leads, lotes,
-    records, roles, users, webhooks,
+    records, roles, users, voip, webhooks,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -22,3 +22,4 @@ api_router.include_router(users.router, prefix="/admin", tags=["Admin - Users"])
 api_router.include_router(webhooks.router, prefix="/admin", tags=["Admin - Webhooks"])
 api_router.include_router(automations.router, prefix="/admin", tags=["Admin - Automations"])
 api_router.include_router(records.router, prefix="/admin", tags=["Admin - Records"])
+api_router.include_router(voip.router, prefix="/admin", tags=["Admin - VoIP"])

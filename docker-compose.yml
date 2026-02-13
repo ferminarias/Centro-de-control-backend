@@ -29,5 +29,25 @@ services:
     volumes:
       - .:/app
 
+  asterisk:
+    image: andrius/asterisk:20-alpine
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "5038:5038"          # AMI
+      - "8088:8088"          # ARI / HTTP
+      - "10000-10099:10000-10099/udp"  # RTP range
+    volumes:
+      - ./asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+      - ./asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./asterisk/manager.conf:/etc/asterisk/manager.conf:ro
+      - ./asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
+      - asterisk_recordings:/var/spool/asterisk/recording
+    environment:
+      - ASTERISK_UID=0
+      - ASTERISK_GID=0
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  asterisk_recordings:

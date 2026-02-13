@@ -49,6 +49,21 @@ ALL_PERMISSIONS: list[str] = [
     "automations:create",
     "automations:update",
     "automations:delete",
+    # VoIP
+    "voip:read",
+    "voip:create",
+    "voip:update",
+    "voip:delete",
+    # Campaigns
+    "campaigns:read",
+    "campaigns:create",
+    "campaigns:update",
+    "campaigns:delete",
+    # Agents
+    "agents:read",
+    "agents:create",
+    "agents:update",
+    "agents:delete",
     # Account settings
     "settings:read",
     "settings:update",
