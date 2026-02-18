@@ -26,3 +26,6 @@ class Role(Base):
 
     account: Mapped["Account"] = relationship(back_populates="roles")  # noqa: F821
     users: Mapped[list["User"]] = relationship(back_populates="role")  # noqa: F821
+    module_permissions: Mapped[list["RoleModulePermission"]] = relationship(
+        back_populates="role", cascade="all, delete-orphan"
+    )  # noqa: F821

@@ -40,3 +40,15 @@ class User(Base):
 
     account: Mapped["Account"] = relationship(back_populates="users")  # noqa: F821
     role: Mapped["Role | None"] = relationship(back_populates="users")  # noqa: F821
+    
+    # Leads asignados a este usuario
+    assigned_leads: Mapped[list["Lead"]] = relationship(
+        back_populates="assigned_to",
+        foreign_keys="Lead.assigned_to_id"
+    )  # noqa: F821
+    
+    # CRM Extras
+    actividades: Mapped[list["Actividad"]] = relationship(back_populates="user")  # noqa: F821
+    tareas: Mapped[list["Tarea"]] = relationship(back_populates="user")  # noqa: F821
+    notas: Mapped[list["Nota"]] = relationship(back_populates="user")  # noqa: F821
+    audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="user")  # noqa: F821

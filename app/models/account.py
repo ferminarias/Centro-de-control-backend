@@ -69,3 +69,29 @@ class Account(Base):
     campaigns: Mapped[list["Campaign"]] = relationship(  # noqa: F821
         cascade="all, delete-orphan"
     )
+    ui_modules: Mapped[list["UIModule"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    tipificaciones: Mapped[list["Tipificacion"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    subtipificaciones: Mapped[list["Subtipificacion"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    
+    # CRM Extras
+    actividades: Mapped[list["Actividad"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    tareas: Mapped[list["Tarea"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    notas: Mapped[list["Nota"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    tags: Mapped[list["Tag"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    audit_logs: Mapped[list["AuditLog"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
