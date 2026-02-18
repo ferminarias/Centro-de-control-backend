@@ -22,15 +22,33 @@ def login(
     body: LoginRequest,
     db: Session = Depends(get_db),
 ) -> dict:
-    # Build query: if cuenta_id is provided, filter by it; otherwise just by username
-    query = db.query(User).filter(User.username == body.username, User.activo.is_(True))
-    if body.cuenta_id:
-        query = query.filter(User.cuenta_id == body.cuenta_id)
-    user = query.first()
-    if not user or not verify_password(body.password, user.password_hash):
+    try:
+        # Build query: if cuenta_id is provided, filter by it; otherwise just by username
+        query = db.query(User).filter(User.username == body.username, User.activo.is_(True))
+        if body.cuenta_id:
+            query = query.filter(User.cuenta_id == body.cuenta_id)
+        user = query.first()
+        
+        if not user:
+            logger.warning("Login failed: user '%s' not found", body.username)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password",
+            )
+        
+        if not verify_password(body.password, user.password_hash):
+            logger.warning("Login failed: invalid password for user '%s'", body.username)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Unexpected error during login: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during login",
         )
 
     # Gather permissions from role

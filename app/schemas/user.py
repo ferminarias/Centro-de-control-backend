@@ -48,6 +48,14 @@ class LoginRequest(BaseModel):
     username: str
     password: str
     cuenta_id: uuid.UUID | None = None
+    
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "username": "user@example.com",
+            "password": "secret123",
+            "cuenta_id": None
+        }
+    })
 
 
 class LoginResponse(BaseModel):
