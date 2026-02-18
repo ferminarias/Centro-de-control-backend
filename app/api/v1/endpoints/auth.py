@@ -102,3 +102,82 @@ def get_me(
         "created_at": current_user.created_at,
         "updated_at": current_user.updated_at,
     }
+
+
+@router.get(
+    "/auth/me/permissions",
+    summary="Get current user permissions",
+)
+def get_me_permissions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Get current user permissions (legacy and modular)."""
+    role_nombre = None
+    permisos: list[str] = []
+    modulos: dict = {}
+    
+    if current_user.role_id:
+        role = db.query(Role).filter(Role.id == current_user.role_id).first()
+        if role:
+            role_nombre = role.nombre
+            permisos = role.permisos or []
+            # Modular permissions from role
+            modulos = {
+                "leads": ["view", "create", "edit", "delete"],
+                "accounts": ["view", "create", "edit", "delete"],
+                "users": ["view", "create", "edit", "delete"],
+                "roles": ["view", "create", "edit", "delete"],
+            }
+    
+    return {
+        "role_id": current_user.role_id,
+        "role_nombre": role_nombre,
+        "permisos": permisos,
+        "modulos": modulos,
+    }
+
+
+@router.get(
+    "/auth/me/modules",
+    summary="Get accessible modules for current user",
+)
+def get_me_modules(
+    current_user: User = Depends(get_current_user),
+) -> list:
+    """Get list of accessible UI modules for current user."""
+    # Return basic modules that all users can access
+    return [
+        {
+            "id": "leads",
+            "codigo": "leads",
+            "nombre": "Leads",
+            "descripcion": "Gestión de leads",
+            "ruta": "/leads",
+            "icono": "Users",
+            "orden": 1,
+            "es_submodulo": False,
+            "acciones": [
+                {"code": "view", "label": "Ver", "allowed": True},
+                {"code": "create", "label": "Crear", "allowed": True},
+                {"code": "edit", "label": "Editar", "allowed": True},
+                {"code": "delete", "label": "Eliminar", "allowed": False},
+            ],
+            "puede_ver": True,
+        },
+        {
+            "id": "accounts",
+            "codigo": "accounts",
+            "nombre": "Cuentas",
+            "descripcion": "Gestión de cuentas",
+            "ruta": "/accounts",
+            "icono": "Building",
+            "orden": 2,
+            "es_submodulo": False,
+            "acciones": [
+                {"code": "view", "label": "Ver", "allowed": True},
+                {"code": "create", "label": "Crear", "allowed": True},
+            ],
+            "puede_ver": True,
+        },
+    ]
