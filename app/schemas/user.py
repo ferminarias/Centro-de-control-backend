@@ -47,7 +47,7 @@ class UserListResponse(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
-    cuenta_id: uuid.UUID
+    cuenta_id: uuid.UUID | None = None
 
 
 class LoginResponse(BaseModel):
