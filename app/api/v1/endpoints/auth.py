@@ -22,15 +22,11 @@ def login(
     body: LoginRequest,
     db: Session = Depends(get_db),
 ) -> dict:
-    user = (
-        db.query(User)
-        .filter(
-            User.username == body.username,
-            User.cuenta_id == body.cuenta_id,
-            User.activo.is_(True),
-        )
-        .first()
-    )
+    # Build query: if cuenta_id is provided, filter by it; otherwise just by username
+    query = db.query(User).filter(User.username == body.username, User.activo.is_(True))
+    if body.cuenta_id:
+        query = query.filter(User.cuenta_id == body.cuenta_id)
+    user = query.first()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
