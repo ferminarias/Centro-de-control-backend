@@ -270,7 +270,13 @@ class Tag(Base):
     # Relationships
     account: Mapped["Account"] = relationship(back_populates="tags")  # noqa: F821
     leads: Mapped[list["Lead"]] = relationship(
-        secondary="lead_tags", back_populates="tags"
+        secondary="lead_tags", 
+        back_populates="tags",
+        overlaps="lead_tags,tag"
+    )
+    lead_tags: Mapped[list["LeadTag"]] = relationship(
+        back_populates="tag",
+        overlaps="leads,tags"
     )
 
 
@@ -301,5 +307,11 @@ class LeadTag(Base):
     )
 
     # Relationships
-    lead: Mapped["Lead"] = relationship(back_populates="lead_tags")  # noqa: F821
-    tag: Mapped["Tag"] = relationship(back_populates="lead_tags")  # noqa: F821
+    lead: Mapped["Lead"] = relationship(
+        back_populates="lead_tags",
+        overlaps="tags,leads"
+    )  # noqa: F821
+    tag: Mapped["Tag"] = relationship(
+        back_populates="lead_tags",
+        overlaps="leads,tags"
+    )  # noqa: F821

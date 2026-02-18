@@ -133,10 +133,12 @@ class Lead(Base):
     
     tags: Mapped[list["Tag"]] = relationship(
         secondary="lead_tags",
-        back_populates="leads"
+        back_populates="leads",
+        overlaps="lead_tags,lead"
     )  # noqa: F821
     
     lead_tags: Mapped[list["LeadTag"]] = relationship(
         back_populates="lead",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        overlaps="tags,leads"
     )  # noqa: F821
