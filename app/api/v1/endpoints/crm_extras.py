@@ -8,6 +8,7 @@ API endpoints para CRM Extras:
 """
 import logging
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
