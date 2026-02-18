@@ -33,6 +33,7 @@ class CustomField(Base):
     nombre_campo: Mapped[str] = mapped_column(String(255), nullable=False)
     tipo_dato: Mapped[str] = mapped_column(String(20), default="string")
     descripcion: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    column_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     es_requerido: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

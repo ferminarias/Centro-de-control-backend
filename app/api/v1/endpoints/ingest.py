@@ -15,6 +15,7 @@ from app.services.field_auto_creator import auto_create_fields, detect_unknown_f
 from app.services.lead_id_generator import next_id_lead
 from app.services.routing_engine import evaluate_routing
 from app.services.webhook_dispatcher import dispatch_event
+from app.utils.column_manager import sync_lead_columns
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -93,6 +94,20 @@ def ingest_webhook(
     db.commit()
     db.refresh(record)
     db.refresh(lead)
+
+    # Sync custom-field values into real columns
+    try:
+        field_rows = (
+            db.query(CustomField.nombre_campo, CustomField.column_name)
+            .filter(CustomField.cuenta_id == account.id, CustomField.column_name.isnot(None))
+            .all()
+        )
+        field_map = {name: col for name, col in field_rows}
+        if field_map:
+            sync_lead_columns(db, lead.id, payload, field_map)
+            db.commit()
+    except Exception as e:
+        logger.error("Failed to sync lead columns for lead %s: %s", lead.id, e)
 
     logger.info("Record %s and Lead %s created (base=%s) for account %s", record.id, lead.id, lead_base_id, account.id)
 

@@ -24,6 +24,7 @@ from app.schemas.lote import (
 )
 from app.services.field_auto_creator import auto_create_fields
 from app.services.lead_id_generator import next_id_lead
+from app.utils.column_manager import sync_lead_columns
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(verify_admin_key)])
@@ -123,6 +124,14 @@ def import_lote(
     db.add(lote)
     db.flush()
 
+    # Load field_map for column sync
+    field_rows = (
+        db.query(CustomField.nombre_campo, CustomField.column_name)
+        .filter(CustomField.cuenta_id == account.id, CustomField.column_name.isnot(None))
+        .all()
+    )
+    field_map = {name: col for name, col in field_rows}
+
     # Create leads from rows
     count = 0
     for row in rows[1:]:
@@ -149,6 +158,12 @@ def import_lote(
             id_lead=next_id_lead(db, account.id),
         )
         db.add(lead)
+        db.flush()
+        if field_map:
+            try:
+                sync_lead_columns(db, lead.id, datos, field_map)
+            except Exception as e:
+                logger.error("Failed to sync columns for imported lead: %s", e)
         count += 1
 
     lote.total_leads = count

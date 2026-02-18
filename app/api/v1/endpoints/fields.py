@@ -8,6 +8,7 @@ from app.core.security import verify_admin_key
 from app.models.account import Account
 from app.models.field import CustomField
 from app.schemas.field import FieldCreate, FieldListResponse, FieldResponse, FieldUpdate
+from app.utils.column_manager import add_column_to_leads, drop_column_from_leads, sanitize_column_name
 
 router = APIRouter(dependencies=[Depends(verify_admin_key)])
 
@@ -69,8 +70,11 @@ def create_field(
             detail=f"Field '{data.nombre_campo}' already exists for this account",
         )
 
-    field = CustomField(cuenta_id=account_id, **data.model_dump())
+    col_name = sanitize_column_name(data.nombre_campo)
+    field = CustomField(cuenta_id=account_id, column_name=col_name, **data.model_dump())
     db.add(field)
+    db.flush()
+    add_column_to_leads(db, col_name)
     db.commit()
     db.refresh(field)
     return field
@@ -110,5 +114,8 @@ def delete_field(
     field = db.query(CustomField).filter(CustomField.id == field_id).first()
     if not field:
         raise HTTPException(status_code=404, detail="Field not found")
+    col_name = field.column_name
     db.delete(field)
+    if col_name:
+        drop_column_from_leads(db, col_name)
     db.commit()

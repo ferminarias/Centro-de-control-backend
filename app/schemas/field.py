@@ -27,6 +27,7 @@ class FieldResponse(BaseModel):
     nombre_campo: str
     tipo_dato: FieldType
     descripcion: str | None
+    column_name: str | None
     es_requerido: bool
     created_at: datetime
 

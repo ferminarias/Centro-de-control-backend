@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.field import CustomField
 from app.services.type_inference import infer_type
+from app.utils.column_manager import add_column_to_leads, sanitize_column_name
 
 logger = logging.getLogger(__name__)
 
@@ -29,22 +30,32 @@ def auto_create_fields(
             continue
 
         tipo = infer_type(value)
+        col_name = sanitize_column_name(key)
         field = CustomField(
             cuenta_id=cuenta_id,
             nombre_campo=key,
             tipo_dato=tipo,
+            column_name=col_name,
         )
         db.add(field)
         created.append(key)
         logger.info(
-            "Auto-created field '%s' (type=%s) for account %s",
+            "Auto-created field '%s' (type=%s, col=%s) for account %s",
             key,
             tipo,
+            col_name,
             cuenta_id,
         )
 
     if created:
         db.flush()
+        # Create real columns on the leads table
+        for key in created:
+            col_name = sanitize_column_name(key)
+            try:
+                add_column_to_leads(db, col_name)
+            except Exception as e:
+                logger.error("Failed to add column '%s': %s", col_name, e)
 
     return created
 

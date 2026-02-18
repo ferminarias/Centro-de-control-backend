@@ -10,10 +10,12 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_admin_key
 from app.models.account import Account
+from app.models.field import CustomField
 from app.models.lead import Lead
 from app.models.lead_base import LeadBase
 from app.models.lote import Lote
 from app.schemas.lead import BulkUpdateResponse, LeadListResponse, LeadResponse
+from app.utils.column_manager import sync_lead_columns
 
 logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(verify_admin_key)])
@@ -198,6 +200,7 @@ def bulk_update_leads(
     updated = 0
     not_found_ids: list[int] = []
     errors: list[str] = []
+    leads_to_sync: list[tuple] = []
 
     for row_idx, row in enumerate(rows[1:], start=2):
         raw_id = row[0] if row else None
@@ -236,6 +239,21 @@ def bulk_update_leads(
             if lead.record:
                 lead.record.datos = new_datos
             updated += 1
+            leads_to_sync.append((lead.id, new_datos))
+
+    # Sync custom-field values into real columns
+    try:
+        field_rows = (
+            db.query(CustomField.nombre_campo, CustomField.column_name)
+            .filter(CustomField.cuenta_id == account_id, CustomField.column_name.isnot(None))
+            .all()
+        )
+        field_map = {name: col for name, col in field_rows}
+        if field_map:
+            for lead_id, datos in leads_to_sync:
+                sync_lead_columns(db, lead_id, datos, field_map)
+    except Exception as e:
+        logger.error("Failed to sync lead columns during bulk update: %s", e)
 
     db.commit()
 
