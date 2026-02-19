@@ -23,7 +23,7 @@ class SubtipificacionBase(BaseModel):
 
 class SubtipificacionCreate(SubtipificacionBase):
     """Schema for creating a Subtipificacion."""
-    tipificacion_id: uuid.UUID
+    pass  # tipificacion_id viene de la URL, no del body
 
 
 class SubtipificacionUpdate(BaseModel):
