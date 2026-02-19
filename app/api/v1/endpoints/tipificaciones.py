@@ -414,7 +414,7 @@ def create_subtipificacion(
     
     sub = Subtipificacion(
         tipificacion_id=tipificacion_id,
-        cuenta_id=current_user.cuenta_id,
+        cuenta_id=tip.cuenta_id,  # Usar cuenta_id del tip padre, no del usuario
         nombre=body.nombre,
         descripcion=body.descripcion,
         color=body.color,
