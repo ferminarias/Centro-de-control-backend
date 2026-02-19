@@ -95,3 +95,6 @@ class Account(Base):
     audit_logs: Mapped[list["AuditLog"]] = relationship(  # noqa: F821
         back_populates="account", cascade="all, delete-orphan"
     )
+    campanias: Mapped[list["Campania"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )
