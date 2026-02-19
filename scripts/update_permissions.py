@@ -129,10 +129,10 @@ def main():
         role = cursor.fetchone()
         
         if not role:
-            print("❌ Rol 'Ultra Admin' no encontrado")
+            print("[ERROR] Rol 'Ultra Admin' no encontrado")
             sys.exit(1)
         
-        print(f"✓ Rol encontrado: {role['nombre']} (ID: {role['id']})")
+        print(f"[OK] Rol encontrado: {role['nombre']} (ID: {role['id']})")
         
         # Actualizar permisos
         cursor.execute(
@@ -141,7 +141,7 @@ def main():
         )
         conn.commit()
         
-        print(f"✓ Permisos actualizados")
+        print(f"[OK] Permisos actualizados")
         print(f"  Total permisos: {len(ALL_PERMISSIONS)}")
         
         # Mostrar nuevos permisos agregados
@@ -150,7 +150,7 @@ def main():
         
         agregados = permisos_nuevos - permisos_anteriores
         if agregados:
-            print(f"\n📌 Nuevos permisos agregados ({len(agregados)}):")
+            print(f"\n[+] Nuevos permisos agregados ({len(agregados)}):")
             for p in sorted(agregados):
                 print(f"   + {p}")
         
