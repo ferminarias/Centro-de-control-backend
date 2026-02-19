@@ -110,6 +110,9 @@ def main():
             "notas:create", "notas:read", "notas:update", "notas:delete",
             "tags:create", "tags:read", "tags:update", "tags:delete",
             "audit:read",
+            # Campañas (Contact Center)
+            "campanias:*",
+            "campanias:create", "campanias:read", "campanias:update", "campanias:delete",
         ]
         
         if role:

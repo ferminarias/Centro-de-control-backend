@@ -890,3 +890,76 @@ def get_metricas(
         "porcentaje_contacto": 0.0,
         "top_tipificaciones": []
     }
+
+
+# =============================================================================
+# Cambiar Estado de Campaña
+# =============================================================================
+
+class EstadoCampaniaRequest(BaseModel):
+    estado: str  # borrador, activa, pausada, finalizada
+
+@router.patch(
+    "/campanias/{campania_id}/estado",
+    response_model=CampaniaResponse,
+    summary="Cambiar estado de campaña",
+    dependencies=[Depends(require_permission("campanias:write"))],
+)
+def cambiar_estado_campania(
+    campania_id: uuid.UUID,
+    body: EstadoCampaniaRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Cambiar el estado de una campaña (activar, pausar, finalizar)."""
+    campania = db.query(Campania).filter(Campania.id == campania_id).first()
+    if not campania:
+        raise HTTPException(status_code=404, detail="Campaña no encontrada")
+    
+    verify_account_access(current_user, campania.cuenta_id, db)
+    
+    # Validar transición de estado
+    estados_validos = ["borrador", "activa", "pausada", "finalizada"]
+    if body.estado not in estados_validos:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Estado inválido. Estados permitidos: {', '.join(estados_validos)}"
+        )
+    
+    # Guardar estado anterior para logging
+    estado_anterior = campania.estado
+    
+    # Actualizar estado
+    campania.estado = body.estado
+    campania.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(campania)
+    
+    logger.info(
+        f"Campaña '{campania.nombre}' cambió de estado '{estado_anterior}' -> '{body.estado}' "
+        f"por {current_user.username}"
+    )
+    
+    return {
+        "id": campania.id,
+        "cuenta_id": campania.cuenta_id,
+        "nombre": campania.nombre,
+        "descripcion": campania.descripcion,
+        "tipo_discador": campania.tipo_discador,
+        "estado": campania.estado,
+        "config_discador": campania.config_discador,
+        "permite_llamada_manual": campania.permite_llamada_manual,
+        "grabar_llamadas": campania.grabar_llamadas,
+        "horario_inicio": campania.horario_inicio,
+        "horario_fin": campania.horario_fin,
+        "dias_operacion": campania.dias_operacion,
+        "tipificaciones_permitidas": campania.tipificaciones_permitidas,
+        "prioridad": campania.prioridad,
+        "created_at": campania.created_at,
+        "updated_at": campania.updated_at,
+        "created_by": campania.created_by,
+        "total_bases": len(campania.bases),
+        "total_agentes": len(campania.agentes),
+        "leads_en_cola": len([l for l in campania.cola if l.estado == EstadoCola.PENDIENTE]),
+    }
