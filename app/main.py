@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
+from app.core.audit_middleware import AuditMiddleware
 from app.core.database import Base, engine
 
 logging.basicConfig(
@@ -195,6 +196,9 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=3600,
 )
+
+# Middleware de auditoría automática
+app.add_middleware(AuditMiddleware)
 
 app.include_router(api_router)
 
