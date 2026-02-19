@@ -75,6 +75,26 @@ def verificar_ownership_lead(db: Session, lead_id: uuid.UUID, cuenta_id: uuid.UU
     return lead
 
 
+def verify_account_access(current_user: User, account_id: uuid.UUID, db: Session) -> None:
+    """Verify user has access to the account (owns it or is ultra admin)."""
+    # User owns the account
+    if str(current_user.cuenta_id) == str(account_id):
+        return
+    
+    # Check if user is ultra admin (has accounts:* permission)
+    from app.models.role import Role
+    if current_user.role_id:
+        role = db.query(Role).filter(Role.id == current_user.role_id).first()
+        if role and role.permisos:
+            if "accounts:*" in role.permisos or "*" in role.permisos:
+                return
+    
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Acceso denegado"
+    )
+
+
 def crear_audit_log(
     db: Session,
     cuenta_id: uuid.UUID,
@@ -129,8 +149,7 @@ def list_actividades(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Listar actividades con filtros opcionales."""
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     query = db.query(Actividad).filter(Actividad.cuenta_id == account_id)
     
@@ -170,8 +189,8 @@ def create_actividad(
     current_user: User = Depends(get_current_user),
 ) -> Actividad:
     """Crear una nueva actividad (llamada, email, reunión, etc.)."""
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    # Verificar acceso a la cuenta (soporta ultra admin)
+    verify_account_access(current_user, account_id, db)
     
     # Verificar lead
     verificar_ownership_lead(db, body.lead_id, account_id, current_user)
@@ -331,8 +350,7 @@ def list_tareas(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Listar tareas con filtros."""
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     query = db.query(Tarea).filter(Tarea.cuenta_id == account_id)
     
@@ -373,8 +391,7 @@ def get_tareas_stats(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Obtener estadísticas de tareas."""
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     query = db.query(Tarea).filter(Tarea.cuenta_id == account_id)
     if user_id:
@@ -420,8 +437,7 @@ def create_tarea(
     current_user: User = Depends(get_current_user),
 ) -> Tarea:
     """Crear una nueva tarea."""
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     if body.lead_id:
         verificar_ownership_lead(db, body.lead_id, account_id, current_user)
@@ -666,8 +682,7 @@ def list_tags(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Listar tags de la cuenta."""
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     query = db.query(Tag).filter(Tag.cuenta_id == account_id)
     if activos:
@@ -710,8 +725,7 @@ def create_tag(
     current_user: User = Depends(get_current_user),
 ) -> Tag:
     """Crear un nuevo tag."""
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     tag = Tag(
         cuenta_id=account_id,
@@ -883,8 +897,7 @@ def list_audit_logs(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Ver logs de auditoría (solo admins)."""
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     # TODO: Verificar que el usuario tenga permiso de admin
     # Por ahora, cualquier usuario autenticado puede ver
