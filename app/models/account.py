@@ -98,3 +98,6 @@ class Account(Base):
     campanias: Mapped[list["Campania"]] = relationship(  # noqa: F821
         back_populates="account", cascade="all, delete-orphan"
     )
+    ficha_configs: Mapped[list["FichaConfig"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )

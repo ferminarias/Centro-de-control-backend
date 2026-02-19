@@ -179,6 +179,9 @@ class LeadPendienteResponse(BaseModel):
     # Script o guión de la campaña
     script: str | None = None
 
+    # Ficha config resuelta (campos configurados)
+    ficha_config: dict | None = None
+
 
 class GestionFichaRequest(BaseModel):
     """Datos cuando el agente gestiona una ficha"""

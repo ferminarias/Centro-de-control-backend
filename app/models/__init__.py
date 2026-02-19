@@ -13,6 +13,7 @@ from app.models.campaign import (
     TipoDiscador, EstadoCampania, EstadoCola, EstadoAgenteEnCampania,
 )
 from app.models.crm_extras import Actividad, Tarea, Nota, AuditLog, Tag, LeadTag
+from app.models.ficha_config import FichaConfig
 from app.models.routing_rule import RoutingRule
 from app.models.user import User
 from app.models.voip import (
@@ -31,6 +32,7 @@ __all__ = [
     # Core
     "Account", "Actividad", "Agent", "AuditLog", "Automation", "AutomationAction", "AutomationCondition", "AutomationLog",
     "CallEvent", "CallRecord", "CustomField", "Disposition", "DncEntry", "FieldType",
+    "FichaConfig",
     "Lead", "LeadBase", "LeadTag", "Lote", "Nota", "Record",
     "Role", "RoleModulePermission", "RoutingRule", "Subtipificacion", "Tag", "Tarea", 
     "Tipificacion", "UIModule", "User", "Webhook", "WebhookLog",
