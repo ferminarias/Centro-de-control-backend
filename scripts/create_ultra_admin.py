@@ -85,6 +85,12 @@ def main():
         
         # Todos los permisos posibles
         all_permissions = [
+            # Wildcard - super admin access
+            "*",
+            # Module wildcards for cross-account access
+            "accounts:*", "users:*", "roles:*", "leads:*", "fields:*", "records:*",
+            "webhooks:*", "automations:*", "lotes:*", "bases:*",
+            "tipificaciones:*", "actividades:*", "tareas:*", "notas:*", "tags:*",
             # Legacy permissions
             "accounts:create", "accounts:read", "accounts:update", "accounts:delete",
             "users:create", "users:read", "users:update", "users:delete",
