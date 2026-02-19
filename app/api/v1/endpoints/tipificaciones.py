@@ -37,13 +37,24 @@ router = APIRouter()
 # Helper Functions
 # ─────────────────────────────────────────────────────────────────────────────
 
-def verify_ownership(tip: Tipificacion | Subtipificacion, cuenta_id: uuid.UUID) -> None:
+def verify_ownership(tip: Tipificacion | Subtipificacion, cuenta_id: uuid.UUID, current_user: User | None = None, db: Session | None = None) -> None:
     """Verify that the resource belongs to the account."""
-    if str(tip.cuenta_id) != str(cuenta_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para acceder a este recurso"
-        )
+    # Direct ownership
+    if str(tip.cuenta_id) == str(cuenta_id):
+        return
+    
+    # Check ultra admin permission
+    if current_user and db and current_user.role_id:
+        from app.models.role import Role
+        role = db.query(Role).filter(Role.id == current_user.role_id).first()
+        if role and role.permisos:
+            if "accounts:*" in role.permisos or "*" in role.permisos:
+                return
+    
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="No tienes permiso para acceder a este recurso"
+    )
 
 
 def verify_account_access(current_user: User, account_id: uuid.UUID, db: Session) -> None:
@@ -226,7 +237,7 @@ def get_tipificacion(
     if not tip:
         raise HTTPException(status_code=404, detail="Tipificacion no encontrada")
     
-    verify_ownership(tip, current_user.cuenta_id)
+    verify_ownership(tip, current_user.cuenta_id, current_user, db)
     
     return tip
 
@@ -248,7 +259,7 @@ def update_tipificacion(
     if not tip:
         raise HTTPException(status_code=404, detail="Tipificacion no encontrada")
     
-    verify_ownership(tip, current_user.cuenta_id)
+    verify_ownership(tip, current_user.cuenta_id, current_user, db)
     
     # Update fields
     if body.nombre is not None:
@@ -319,7 +330,7 @@ def delete_tipificacion(
     if not tip:
         raise HTTPException(status_code=404, detail="Tipificacion no encontrada")
     
-    verify_ownership(tip, current_user.cuenta_id)
+    verify_ownership(tip, current_user.cuenta_id, current_user, db)
     
     # Check if any leads are using this tipificacion
     leads_count = db.query(Lead).filter(Lead.tipificacion_id == tipificacion_id).count()
@@ -357,7 +368,7 @@ def list_subtipificaciones(
     if not tip:
         raise HTTPException(status_code=404, detail="Tipificacion no encontrada")
     
-    verify_ownership(tip, current_user.cuenta_id)
+    verify_ownership(tip, current_user.cuenta_id, current_user, db)
     
     query = db.query(Subtipificacion).filter(
         Subtipificacion.tipificacion_id == tipificacion_id
@@ -392,7 +403,7 @@ def create_subtipificacion(
     if not tip:
         raise HTTPException(status_code=404, detail="Tipificacion no encontrada")
     
-    verify_ownership(tip, current_user.cuenta_id)
+    verify_ownership(tip, current_user.cuenta_id, current_user, db)
     
     # Check if tipificacion is final (doesn't allow subtipificaciones)
     if tip.es_final:
@@ -436,7 +447,7 @@ def update_subtipificacion(
     if not sub:
         raise HTTPException(status_code=404, detail="Subtipificacion no encontrada")
     
-    verify_ownership(sub, current_user.cuenta_id)
+    verify_ownership(sub, current_user.cuenta_id, current_user, db)
     
     if body.nombre is not None:
         sub.nombre = body.nombre
@@ -473,7 +484,7 @@ def delete_subtipificacion(
     if not sub:
         raise HTTPException(status_code=404, detail="Subtipificacion no encontrada")
     
-    verify_ownership(sub, current_user.cuenta_id)
+    verify_ownership(sub, current_user.cuenta_id, current_user, db)
     
     # Check if any leads are using this subtipificacion
     leads_count = db.query(Lead).filter(Lead.subtipificacion_id == subtipificacion_id).count()
