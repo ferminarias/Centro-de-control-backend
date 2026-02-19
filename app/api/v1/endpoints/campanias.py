@@ -50,13 +50,20 @@ def verify_account_access(current_user: User, account_id: uuid.UUID, db: Session
     if str(current_user.cuenta_id) == str(account_id):
         return
     
+    if is_ultra_admin(current_user, db):
+        return
+    
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado")
+
+
+def is_ultra_admin(current_user: User, db: Session) -> bool:
+    """Check if user is ultra admin (has accounts:* or * permission)."""
     if current_user.role_id:
         role = db.query(Role).filter(Role.id == current_user.role_id).first()
         if role and role.permisos:
             if "accounts:*" in role.permisos or "*" in role.permisos:
-                return
-    
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acceso denegado")
+                return True
+    return False
 
 
 def get_next_lead_for_agent(
@@ -562,14 +569,14 @@ def agente_entrar_campania(
     if not campania:
         raise HTTPException(status_code=404, detail="Campaña no encontrada")
     
-    # Verificar que el agente esté asignado
+    # Verificar que el agente esté asignado (o sea ultra admin)
     asignacion = db.query(CampaniaAgente).filter(
         CampaniaAgente.campania_id == campania_id,
         CampaniaAgente.agente_id == current_user.id,
         CampaniaAgente.activo == True
     ).first()
     
-    if not asignacion:
+    if not asignacion and not is_ultra_admin(current_user, db):
         raise HTTPException(status_code=403, detail="No estás asignado a esta campaña")
     
     # Cerrar sesiones anteriores abiertas
@@ -618,14 +625,14 @@ def solicitar_ficha(
     if not campania:
         raise HTTPException(status_code=404, detail="Campaña no encontrada")
     
-    # Verificar asignación
+    # Verificar asignación (o sea ultra admin)
     asignacion = db.query(CampaniaAgente).filter(
         CampaniaAgente.campania_id == campania_id,
         CampaniaAgente.agente_id == current_user.id,
         CampaniaAgente.activo == True
     ).first()
     
-    if not asignacion:
+    if not asignacion and not is_ultra_admin(current_user, db):
         raise HTTPException(status_code=403, detail="No estás asignado a esta campaña")
     
     # Verificar si ya tiene una ficha asignada
