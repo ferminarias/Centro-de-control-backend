@@ -18,7 +18,8 @@ from app.models.campaign import (
     Campania, CampaniaAgente, ColaLead, EstadoCola, 
     AgenteCampaniaLog, EstadoAgenteEnCampania, TipoDiscador
 )
-from app.models.lead import Lead, LeadBase
+from app.models.lead import Lead
+from app.models.lead_base import LeadBase
 from app.models.tipificacion import Tipificacion, Subtipificacion
 from app.models.user import User
 
