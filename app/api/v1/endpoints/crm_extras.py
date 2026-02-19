@@ -918,12 +918,41 @@ def list_audit_logs(
         query = query.filter(AuditLog.created_at <= hasta)
     
     total = query.count()
-    items = (
+    logs = (
         query.order_by(desc(AuditLog.created_at))
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
     )
+    
+    # Obtener datos de usuarios
+    user_ids = [log.user_id for log in logs if log.user_id]
+    users = {}
+    if user_ids:
+        user_records = db.query(User).filter(User.id.in_(user_ids)).all()
+        users = {str(u.id): u for u in user_records}
+    
+    # Formatear respuesta
+    items = []
+    for log in logs:
+        user = users.get(str(log.user_id)) if log.user_id else None
+        items.append({
+            "id": log.id,
+            "cuenta_id": log.cuenta_id,
+            "user_id": log.user_id,
+            "entidad_tipo": log.entidad_tipo,
+            "entidad_id": log.entidad_id,
+            "accion": log.accion,
+            "campo": log.campo,
+            "valor_anterior": log.valor_anterior,
+            "valor_nuevo": log.valor_nuevo,
+            "snapshot": log.snapshot,
+            "ip_address": log.ip_address,
+            "endpoint": log.endpoint,
+            "created_at": log.created_at,
+            "user_nombre": user.nombre if user else None,
+            "user_email": user.email if user else None,
+        })
     
     return {"items": items, "total": total}
 

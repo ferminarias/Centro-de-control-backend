@@ -15,6 +15,7 @@ from sqlalchemy import and_, desc, func
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, require_permission
+from app.core.audit import log_action, log_entity_change
 from app.core.database import get_db
 from app.models.account import Account
 from app.models.campaign import (
@@ -254,6 +255,17 @@ def create_campania(
     
     db.commit()
     db.refresh(campania)
+    
+    # Audit log
+    log_action(
+        db=db,
+        cuenta_id=account_id,
+        user_id=current_user.id,
+        entidad_tipo="campania",
+        entidad_id=campania.id,
+        accion="create",
+        snapshot={"nombre": campania.nombre, "tipo_discador": campania.tipo_discador},
+    )
     
     logger.info(f"Campaña '{campania.nombre}' creada por {current_user.username}")
     
@@ -787,6 +799,23 @@ def gestionar_ficha(
     
     db.commit()
     
+    # Audit log
+    log_action(
+        db=db,
+        cuenta_id=cola.campania.cuenta_id,
+        user_id=current_user.id,
+        entidad_tipo="lead",
+        entidad_id=lead.id,
+        accion="update",
+        campo="tipificacion",
+        snapshot={
+            "tipificacion_id": str(body.tipificacion_id),
+            "subtipificacion_id": str(body.subtipificacion_id) if body.subtipificacion_id else None,
+            "campania_id": str(campania_id),
+            "notas": body.notas,
+        },
+    )
+    
     return {
         "success": True,
         "message": "Ficha gestionada correctamente",
@@ -943,6 +972,19 @@ def cambiar_estado_campania(
     
     db.commit()
     db.refresh(campania)
+    
+    # Audit log
+    log_action(
+        db=db,
+        cuenta_id=campania.cuenta_id,
+        user_id=current_user.id,
+        entidad_tipo="campania",
+        entidad_id=campania.id,
+        accion="update",
+        campo="estado",
+        valor_anterior=estado_anterior,
+        valor_nuevo=body.estado,
+    )
     
     logger.info(
         f"Campaña '{campania.nombre}' cambió de estado '{estado_anterior}' -> '{body.estado}' "
