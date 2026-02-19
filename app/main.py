@@ -145,6 +145,41 @@ try:
 except Exception as e:
     logger.error("Failed to add column_name to custom_fields: %s", e)
 
+# Create ficha_configs table if missing (fallback for migration 014)
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text(
+            "SELECT to_regclass('public.ficha_configs')"
+        ))
+        if result.scalar() is None:
+            conn.execute(text("""
+                CREATE TABLE ficha_configs (
+                    id UUID PRIMARY KEY,
+                    cuenta_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                    campania_id UUID REFERENCES campanias(id) ON DELETE CASCADE,
+                    campos JSONB NOT NULL,
+                    created_at TIMESTAMPTZ DEFAULT now(),
+                    updated_at TIMESTAMPTZ DEFAULT now(),
+                    CONSTRAINT uq_ficha_config_cuenta_campania UNIQUE (cuenta_id, campania_id)
+                )
+            """))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_ficha_configs_cuenta_id ON ficha_configs (cuenta_id)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_ficha_configs_campania_id ON ficha_configs (campania_id)"
+            ))
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_ficha_config_cuenta_default "
+                "ON ficha_configs (cuenta_id) WHERE campania_id IS NULL"
+            ))
+            conn.commit()
+            logger.info("Created ficha_configs table")
+        else:
+            logger.info("ficha_configs table already exists")
+except Exception as e:
+    logger.error("Failed to create ficha_configs table: %s", e)
+
 app = FastAPI(
     title="Centro de Control - Multi-Tenant CRM Ingest",
     description="Backend multi-tenant para ingesta de datos de CRM con auto-creación de campos.",

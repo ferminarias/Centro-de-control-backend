@@ -22,6 +22,8 @@ from app.models.campaign import (
     EstadoCampania, EstadoCola, EstadoAgenteEnCampania, TipoDiscador
 )
 from app.models.crm_extras import Actividad
+from app.api.v1.endpoints.ficha_config import resolve_ficha_config
+from app.models.ficha_config import FichaConfig
 from app.models.lead import Lead
 from app.models.lead_base import LeadBase
 from app.models.role import Role
@@ -647,7 +649,7 @@ def solicitar_ficha(
         return {
             "success": True,
             "message": "Tienes una ficha pendiente de gestión",
-            "ficha": _build_ficha_response(ficha_existente, campania)
+            "ficha": _build_ficha_response(ficha_existente, campania, db)
         }
     
     # Buscar nueva ficha
@@ -671,19 +673,23 @@ def solicitar_ficha(
     return {
         "success": True,
         "message": "Ficha asignada",
-        "ficha": _build_ficha_response(nueva_ficha, campania)
+        "ficha": _build_ficha_response(nueva_ficha, campania, db)
     }
 
 
-def _build_ficha_response(cola_lead: ColaLead, campania: Campania) -> dict:
+def _build_ficha_response(cola_lead: ColaLead, campania: Campania, db: Session) -> dict:
     """Construir respuesta de ficha con datos completos."""
     lead = cola_lead.lead
-    
+
     # Historial de gestiones previas
     historial = []
     # TODO: Cargar actividades del lead desde la cuenta
     # actividades = cola_lead.campania.account.actividades
-    
+
+    # Resolve ficha config
+    config = resolve_ficha_config(db, campania.cuenta_id, campania.id)
+    ficha_config = {"id": config.id, "campos": config.campos} if config else None
+
     return {
         "cola_id": cola_lead.id,
         "lead_id": lead.id,
@@ -696,7 +702,8 @@ def _build_ficha_response(cola_lead: ColaLead, campania: Campania) -> dict:
             "subtipificacion": lead.subtipificacion,
         },
         "historial": historial,
-        "script": f"Script de {campania.nombre}"  # Podría venir de config
+        "script": f"Script de {campania.nombre}",  # Podría venir de config
+        "ficha_config": ficha_config,
     }
 
 
