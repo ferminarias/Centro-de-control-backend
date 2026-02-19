@@ -83,36 +83,94 @@ def main():
         )
         role = cursor.fetchone()
         
-        # Todos los permisos posibles
+        # Todos los permisos posibles - ACTUALIZADO 2026
         all_permissions = [
             # Wildcard - super admin access
             "*",
-            # Module wildcards for cross-account access
+            
+            # === MÓDULOS PRINCIPALES (wildcards) ===
             "accounts:*", "users:*", "roles:*", "leads:*", "fields:*", "records:*",
-            "webhooks:*", "automations:*", "lotes:*", "bases:*",
-            "tipificaciones:*", "actividades:*", "tareas:*", "notas:*", "tags:*",
-            # Legacy permissions
+            "webhooks:*", "automations:*", "lotes:*", "bases:*", "voip:*",
+            "tipificaciones:*", "subtipificaciones:*",
+            "actividades:*", "tareas:*", "notas:*", "tags:*", "lead_tags:*",
+            "campanias:*", "reportes:*", "audit:*", 
+            
+            # === ACCOUNTS ===
             "accounts:create", "accounts:read", "accounts:update", "accounts:delete",
+            
+            # === USERS ===
             "users:create", "users:read", "users:update", "users:delete",
+            "users:assign", "users:permissions",
+            
+            # === ROLES ===
             "roles:create", "roles:read", "roles:update", "roles:delete",
+            "roles:permissions:manage",
+            
+            # === LEADS ===
             "leads:create", "leads:read", "leads:update", "leads:delete",
+            "leads:import", "leads:export", "leads:assign", "leads:bulk_update",
+            "leads:move", "leads:merge",
+            
+            # === FIELDS ===
             "fields:create", "fields:read", "fields:update", "fields:delete",
+            
+            # === RECORDS ===
             "records:create", "records:read", "records:update", "records:delete",
+            
+            # === WEBHOOKS ===
             "webhooks:create", "webhooks:read", "webhooks:update", "webhooks:delete",
+            "webhooks:test", "webhooks:logs",
+            
+            # === AUTOMATIONS ===
             "automations:create", "automations:read", "automations:update", "automations:delete",
+            "automations:toggle", "automations:logs",
+            
+            # === LOTES ===
             "lotes:create", "lotes:read", "lotes:update", "lotes:delete",
+            "lotes:import", "lotes:process",
+            
+            # === BASES ===
             "bases:create", "bases:read", "bases:update", "bases:delete",
-            "voip:manage",
+            "bases:import", "bases:export", "bases:stats",
+            
+            # === VOIP / CALL CENTER ===
+            "voip:manage", "voip:providers", "voip:trunks", "voip:pbx",
+            "voip:agents", "voip:cdr", "voip:dnc",
+            
+            # === TIPIFICACIONES ===
             "tipificaciones:create", "tipificaciones:read", "tipificaciones:update", "tipificaciones:delete",
-            # CRM Extras
+            "subtipificaciones:create", "subtipificaciones:read", "subtipificaciones:update", "subtipificaciones:delete",
+            
+            # === CRM EXTRAS ===
             "actividades:create", "actividades:read", "actividades:update", "actividades:delete",
+            "actividades:assign",
             "tareas:create", "tareas:read", "tareas:update", "tareas:delete",
+            "tareas:complete", "tareas:assign",
             "notas:create", "notas:read", "notas:update", "notas:delete",
             "tags:create", "tags:read", "tags:update", "tags:delete",
-            "audit:read",
-            # Campañas (Contact Center)
-            "campanias:*",
+            "tags:assign", "tags:remove",
+            "lead_tags:create", "lead_tags:read", "lead_tags:update", "lead_tags:delete",
+            
+            # === CAMPAÑAS / CONTACT CENTER ===
             "campanias:create", "campanias:read", "campanias:update", "campanias:delete",
+            "campanias:activate", "campanias:pause", "campanias:stop",
+            "campanias:agents:assign", "campanias:agents:remove",
+            "campanias:bases:assign", "campanias:bases:remove",
+            "campanias:gestion", "campanias:fichas:manage",
+            "campanias:tipificaciones:config",
+            
+            # === REPORTES ===
+            "reportes:dashboard", "reportes:bases", "reportes:agentes",
+            "reportes:campanas", "reportes:monitor", "reportes:export",
+            "reportes:stats", "reportes:custom",
+            
+            # === AUDITORÍA / LOGS ===
+            "audit:read", "audit:export", "audit:delete", "audit:config",
+            "audit:login", "audit:security",
+            
+            # === SISTEMA ===
+            "system:config", "system:backup", "system:restore",
+            "system:logs", "system:maintenance",
         ]
         
         if role:

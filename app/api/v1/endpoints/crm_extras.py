@@ -881,7 +881,7 @@ def assign_tags_to_lead(
     "/accounts/{account_id}/audit-logs",
     response_model=AuditLogListResponse,
     summary="Ver logs de auditoría",
-    dependencies=[Depends(require_permission("leads:read"))],
+    dependencies=[Depends(require_permission("audit:read"))],
 )
 def list_audit_logs(
     account_id: uuid.UUID,

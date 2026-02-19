@@ -49,7 +49,7 @@ def verify_account_access(current_user: User, account_id: uuid.UUID, db: Session
 @router.get(
     "/reportes/dashboard",
     summary="Dashboard general de reportes",
-    dependencies=[Depends(require_permission("reportes:read"))],
+    dependencies=[Depends(require_permission("reportes:dashboard"))],
 )
 def get_dashboard(
     account_id: uuid.UUID = Query(..., description="ID de la cuenta"),
@@ -134,7 +134,7 @@ def get_dashboard(
 @router.get(
     "/reportes/bases",
     summary="Reporte de gestión de bases",
-    dependencies=[Depends(require_permission("reportes:read"))],
+    dependencies=[Depends(require_permission("reportes:bases"))],
 )
 def get_reporte_bases(
     account_id: uuid.UUID = Query(...),
@@ -228,7 +228,7 @@ def get_reporte_bases(
 @router.get(
     "/reportes/bases/{base_id}/estado",
     summary="Estado de una base específica",
-    dependencies=[Depends(require_permission("reportes:read"))],
+    dependencies=[Depends(require_permission("reportes:bases"))],
 )
 def get_estado_base(
     base_id: uuid.UUID,
@@ -292,7 +292,7 @@ def get_estado_base(
 @router.get(
     "/reportes/agentes",
     summary="Métricas de productividad de agentes",
-    dependencies=[Depends(require_permission("reportes:read"))],
+    dependencies=[Depends(require_permission("reportes:agentes"))],
 )
 def get_metricas_agentes(
     account_id: uuid.UUID = Query(...),
@@ -412,7 +412,7 @@ def get_metricas_agentes(
 @router.get(
     "/reportes/campanas/{campania_id}/metricas",
     summary="Métricas detalladas de una campaña",
-    dependencies=[Depends(require_permission("reportes:read"))],
+    dependencies=[Depends(require_permission("reportes:campanas"))],
 )
 def get_metricas_campana(
     campania_id: uuid.UUID,
