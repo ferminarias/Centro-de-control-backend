@@ -46,6 +46,26 @@ def verify_ownership(tip: Tipificacion | Subtipificacion, cuenta_id: uuid.UUID) 
         )
 
 
+def verify_account_access(current_user: User, account_id: uuid.UUID, db: Session) -> None:
+    """Verify user has access to the account (owns it or is ultra admin)."""
+    # User owns the account
+    if str(current_user.cuenta_id) == str(account_id):
+        return
+    
+    # Check if user is ultra admin (has accounts:* permission)
+    from app.models.role import Role
+    if current_user.role_id:
+        role = db.query(Role).filter(Role.id == current_user.role_id).first()
+        if role and role.permisos:
+            if "accounts:*" in role.permisos or "*" in role.permisos:
+                return
+    
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Acceso denegado"
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Tipificacion Endpoints
 # ─────────────────────────────────────────────────────────────────────────────
@@ -69,8 +89,7 @@ def list_tipificaciones(
     if not account:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada")
     
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     query = db.query(Tipificacion).filter(Tipificacion.cuenta_id == account_id)
     
@@ -140,8 +159,7 @@ def create_tipificacion(
     if not account:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada")
     
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     # Create tipificacion
     tipificacion = Tipificacion(
@@ -492,8 +510,7 @@ def update_lead_tipificacion(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead no encontrado")
     
-    if str(lead.cuenta_id) != str(current_user.cuenta_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, lead.cuenta_id, db)
     
     # Validate tipificacion exists and belongs to account
     if body.tipificacion_id:
@@ -554,7 +571,14 @@ def bulk_update_tipificacion(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Bulk update tipificacion for multiple leads."""
-    cuenta_id = current_user.cuenta_id
+    # Use account_id from first lead or current user
+    from app.models.lead import Lead
+    first_lead = db.query(Lead).filter(Lead.id.in_(body.lead_ids)).first()
+    if first_lead:
+        verify_account_access(current_user, first_lead.cuenta_id, db)
+        cuenta_id = first_lead.cuenta_id
+    else:
+        cuenta_id = current_user.cuenta_id
     
     # Validate tipificacion if provided
     if body.tipificacion_id:
@@ -620,8 +644,7 @@ def get_tipificaciones_stats(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Get statistics of leads by tipificacion."""
-    if str(current_user.cuenta_id) != str(account_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado")
+    verify_account_access(current_user, account_id, db)
     
     tipificaciones = db.query(Tipificacion).filter(
         Tipificacion.cuenta_id == account_id,

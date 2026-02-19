@@ -53,13 +53,25 @@ router = APIRouter()
 # HELPERS
 # =============================================================================
 
-def verificar_ownership_lead(db: Session, lead_id: uuid.UUID, cuenta_id: uuid.UUID) -> Lead:
+def verificar_ownership_lead(db: Session, lead_id: uuid.UUID, cuenta_id: uuid.UUID, current_user: User | None = None) -> Lead:
     """Verifica que el lead pertenezca a la cuenta."""
     lead = db.query(Lead).filter(Lead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead no encontrado")
-    if str(lead.cuenta_id) != str(cuenta_id):
-        raise HTTPException(status_code=403, detail="Acceso denegado a este lead")
+    
+    # Check if user owns the lead's account
+    if str(lead.cuenta_id) == str(cuenta_id):
+        return lead
+    
+    # Check if user is ultra admin
+    if current_user and current_user.role_id:
+        from app.models.role import Role
+        role = db.query(Role).filter(Role.id == current_user.role_id).first()
+        if role and role.permisos:
+            if "accounts:*" in role.permisos or "*" in role.permisos:
+                return lead
+    
+    raise HTTPException(status_code=403, detail="Acceso denegado a este lead")
     return lead
 
 
@@ -162,7 +174,7 @@ def create_actividad(
         raise HTTPException(status_code=403, detail="Acceso denegado")
     
     # Verificar lead
-    verificar_ownership_lead(db, body.lead_id, account_id)
+    verificar_ownership_lead(db, body.lead_id, account_id, current_user)
     
     actividad = Actividad(
         cuenta_id=account_id,
@@ -412,7 +424,7 @@ def create_tarea(
         raise HTTPException(status_code=403, detail="Acceso denegado")
     
     if body.lead_id:
-        verificar_ownership_lead(db, body.lead_id, account_id)
+        verificar_ownership_lead(db, body.lead_id, account_id, current_user)
     
     tarea = Tarea(
         cuenta_id=account_id,
@@ -528,7 +540,7 @@ def list_notas(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Listar notas de un lead."""
-    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id)
+    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id, current_user)
     
     query = db.query(Nota).filter(Nota.lead_id == lead_id)
     
@@ -563,7 +575,7 @@ def create_nota(
     current_user: User = Depends(get_current_user),
 ) -> Nota:
     """Crear una nota para un lead."""
-    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id)
+    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id, current_user)
     
     nota = Nota(
         cuenta_id=current_user.cuenta_id,
@@ -797,7 +809,7 @@ def get_lead_tags(
     current_user: User = Depends(get_current_user),
 ) -> list:
     """Obtener tags asignados a un lead."""
-    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id)
+    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id, current_user)
     
     tags = (
         db.query(Tag)
@@ -821,7 +833,7 @@ def assign_tags_to_lead(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Asignar/quitar tags de un lead."""
-    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id)
+    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id, current_user)
     
     # Eliminar tags actuales
     db.query(LeadTag).filter(LeadTag.lead_id == lead_id).delete()
@@ -920,7 +932,7 @@ def get_lead_timeline(
     current_user: User = Depends(get_current_user),
 ) -> list:
     """Obtener timeline combinado de actividades, notas, tareas y cambios."""
-    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id)
+    lead = verificar_ownership_lead(db, lead_id, current_user.cuenta_id, current_user)
     
     timeline = []
     

@@ -76,10 +76,30 @@ def get_current_user(
 def require_permission(*needed: str):
     """
     Returns a FastAPI dependency that checks the JWT contains ALL the listed permissions.
+    Supports wildcards like "leads:*" or "*" for super admin access.
 
     Usage:
         @router.get("/...", dependencies=[Depends(require_permission("users:read"))])
     """
+
+    def _has_permission(user_perms: list[str], required: str) -> bool:
+        """Check if user has permission, supporting wildcards."""
+        # Direct match
+        if required in user_perms:
+            return True
+        
+        # Super admin wildcard
+        if "*" in user_perms:
+            return True
+        
+        # Module wildcard (e.g., "leads:*" matches "leads:read", "leads:create", etc.)
+        if ":" in required:
+            module = required.split(":")[0]
+            module_wildcard = f"{module}:*"
+            if module_wildcard in user_perms:
+                return True
+        
+        return False
 
     def _checker(
         credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
@@ -90,7 +110,7 @@ def require_permission(*needed: str):
         data = decode_token(credentials.credentials)
         user_perms: list[str] = data.get("permisos", [])
 
-        missing = [p for p in needed if p not in user_perms]
+        missing = [p for p in needed if not _has_permission(user_perms, p)]
         if missing:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
