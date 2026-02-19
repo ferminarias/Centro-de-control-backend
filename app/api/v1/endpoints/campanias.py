@@ -681,8 +681,8 @@ def _build_ficha_response(cola_lead: ColaLead, campania: Campania) -> dict:
     
     # Historial de gestiones previas
     historial = []
-    actividades = cola_lead.campania.cuenta.actividades
-    # Aquí podrías filtrar actividades de este lead
+    # TODO: Cargar actividades del lead desde la cuenta
+    # actividades = cola_lead.campania.account.actividades
     
     return {
         "cola_id": cola_lead.id,
