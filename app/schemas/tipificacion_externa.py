@@ -1,13 +1,13 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 # --- Webhook payload (lo que envía Neotel) ---
 class TipificacionExternaPayload(BaseModel):
     USUARIO: str = Field(..., description="ID del usuario en Neotel")
-    EMLMAIL: EmailStr = Field(..., description="Email del lead")
+    EMLMAIL: str = Field(..., description="Email del lead")
     IdSubresolucion: str = Field(..., description="ID de subresolucion en Neotel")
 
 
