@@ -181,6 +181,67 @@ try:
 except Exception as e:
     logger.error("Failed to create ficha_configs table: %s", e)
 
+# Create tipificaciones_externas table and ultima_tipificacion column if missing (fallback for migration 015)
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text(
+            "SELECT to_regclass('public.tipificaciones_externas')"
+        ))
+        if result.scalar() is None:
+            conn.execute(text("""
+                CREATE TABLE tipificaciones_externas (
+                    id UUID PRIMARY KEY,
+                    cuenta_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                    lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+                    email VARCHAR(255) NOT NULL,
+                    id_neotel VARCHAR(100) NOT NULL,
+                    id_subresolucion VARCHAR(100) NOT NULL,
+                    raw_payload JSONB NOT NULL,
+                    matched BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMPTZ DEFAULT now()
+                )
+            """))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_tipificaciones_externas_cuenta_id "
+                "ON tipificaciones_externas (cuenta_id)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_tipificaciones_externas_lead_id "
+                "ON tipificaciones_externas (lead_id)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_tipificaciones_externas_created_at "
+                "ON tipificaciones_externas (created_at)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_tipificaciones_externas_cuenta_email "
+                "ON tipificaciones_externas (cuenta_id, email)"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_tipificaciones_externas_cuenta_matched "
+                "ON tipificaciones_externas (cuenta_id, matched)"
+            ))
+            conn.commit()
+            logger.info("Created tipificaciones_externas table")
+        else:
+            logger.info("tipificaciones_externas table already exists")
+
+        # Add ultima_tipificacion column to leads if missing
+        result = conn.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'leads' AND column_name = 'ultima_tipificacion'"
+        ))
+        if not result.fetchone():
+            conn.execute(text(
+                "ALTER TABLE leads ADD COLUMN ultima_tipificacion JSONB"
+            ))
+            conn.commit()
+            logger.info("Added ultima_tipificacion column to leads table")
+        else:
+            logger.info("ultima_tipificacion column already exists in leads table")
+except Exception as e:
+    logger.error("Failed to create tipificaciones_externas table or column: %s", e)
+
 app = FastAPI(
     title="Centro de Control - Multi-Tenant CRM Ingest",
     description="Backend multi-tenant para ingesta de datos de CRM con auto-creación de campos.",

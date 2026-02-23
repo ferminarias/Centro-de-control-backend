@@ -82,6 +82,12 @@ class Lead(Base):
         comment="'frio', 'templado', 'caliente', 'muy_caliente'",
     )
     
+    # Última tipificación externa recibida via webhook
+    ultima_tipificacion: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True,
+        comment="Última tipificación externa recibida via webhook",
+    )
+
     datos: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
@@ -141,4 +147,11 @@ class Lead(Base):
         back_populates="lead",
         cascade="all, delete-orphan",
         overlaps="tags,leads"
+    )  # noqa: F821
+
+    # Tipificaciones externas (Neotel)
+    tipificaciones_externas: Mapped[list["TipificacionExterna"]] = relationship(
+        back_populates="lead",
+        cascade="all, delete-orphan",
+        order_by="TipificacionExterna.created_at.desc()"
     )  # noqa: F821

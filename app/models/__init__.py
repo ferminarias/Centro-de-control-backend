@@ -15,6 +15,7 @@ from app.models.campaign import (
 from app.models.crm_extras import Actividad, Tarea, Nota, AuditLog, Tag, LeadTag
 from app.models.ficha_config import FichaConfig
 from app.models.routing_rule import RoutingRule
+from app.models.tipificacion_externa import TipificacionExterna
 from app.models.user import User
 from app.models.voip import (
     Agent, CallEvent, CallRecord, Campaign as VoipCampaign, CampaignAgent, CampaignLead,
@@ -35,5 +36,5 @@ __all__ = [
     "FichaConfig",
     "Lead", "LeadBase", "LeadTag", "Lote", "Nota", "Record",
     "Role", "RoleModulePermission", "RoutingRule", "Subtipificacion", "Tag", "Tarea", 
-    "Tipificacion", "UIModule", "User", "Webhook", "WebhookLog",
+    "Tipificacion", "TipificacionExterna", "UIModule", "User", "Webhook", "WebhookLog",
 ]
