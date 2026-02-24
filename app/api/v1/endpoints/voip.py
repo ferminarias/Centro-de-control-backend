@@ -16,7 +16,7 @@ from app.core.database import get_db
 from app.core.security import verify_admin_key
 from app.models.account import Account
 from app.models.lead import Lead
-from app.models.Campania import Campania, TipoDiscador, EstadoCampania
+from app.models.campaign import Campania, TipoDiscador, EstadoCampania
 from app.models.voip import (
     Agent, AgentStatus, CallEvent, CallRecord, CampaignAgent,
     CampaignLead, CampaignLeadStatus, Disposition,
