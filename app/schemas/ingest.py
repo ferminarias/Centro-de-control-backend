@@ -6,8 +6,9 @@ from pydantic import BaseModel
 class IngestResponse(BaseModel):
     success: bool
     record_id: uuid.UUID
-    lead_id: uuid.UUID
+    lead_id: uuid.UUID | None = None
     lead_base_id: uuid.UUID | None = None
     unknown_fields: list[str]
     auto_create_enabled: bool
     fields_created: list[str] | None = None
+    deduplicated: bool = False

@@ -5,9 +5,12 @@ from sqlalchemy.orm import Session
 
 from sqlalchemy import func
 
+from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.core.multi_tenant import verify_tenant_access
 from app.core.security import verify_admin_key
 from app.models.account import Account
+from app.models.user import User
 from app.models.lead import Lead
 from app.models.lead_base import LeadBase
 from app.models.routing_rule import RoutingRule
@@ -118,10 +121,10 @@ def list_lead_bases(
 def get_lead_base(
     base_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> LeadBase:
-    base = db.query(LeadBase).filter(LeadBase.id == base_id).first()
-    if not base:
-        raise HTTPException(status_code=404, detail="Lead base not found")
+    # Verify tenant access - base must belong to user's account
+    base = verify_tenant_access(db, LeadBase, base_id, current_user)
     return base
 
 
@@ -134,10 +137,10 @@ def update_lead_base(
     base_id: uuid.UUID,
     body: LeadBaseUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> LeadBase:
-    base = db.query(LeadBase).filter(LeadBase.id == base_id).first()
-    if not base:
-        raise HTTPException(status_code=404, detail="Lead base not found")
+    # Verify tenant access - base must belong to user's account
+    base = verify_tenant_access(db, LeadBase, base_id, current_user)
 
     if body.nombre is not None:
         base.nombre = body.nombre
@@ -161,10 +164,11 @@ def update_lead_base(
 def delete_lead_base(
     base_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> None:
-    base = db.query(LeadBase).filter(LeadBase.id == base_id).first()
-    if not base:
-        raise HTTPException(status_code=404, detail="Lead base not found")
+    # Verify tenant access - base must belong to user's account
+    base = verify_tenant_access(db, LeadBase, base_id, current_user)
+    
     if base.es_default:
         raise HTTPException(status_code=400, detail="Cannot delete the default base")
 
@@ -185,10 +189,10 @@ def create_routing_rule(
     base_id: uuid.UUID,
     body: RoutingRuleCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> RoutingRule:
-    base = db.query(LeadBase).filter(LeadBase.id == base_id).first()
-    if not base:
-        raise HTTPException(status_code=404, detail="Lead base not found")
+    # Verify tenant access - base must belong to user's account
+    base = verify_tenant_access(db, LeadBase, base_id, current_user)
 
     valid_operators = {"equals", "not_equals", "contains", "greater_than", "less_than"}
     if body.operador not in valid_operators:
@@ -218,10 +222,10 @@ def create_routing_rule(
 def list_routing_rules(
     base_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    base = db.query(LeadBase).filter(LeadBase.id == base_id).first()
-    if not base:
-        raise HTTPException(status_code=404, detail="Lead base not found")
+    # Verify tenant access - base must belong to user's account
+    base = verify_tenant_access(db, LeadBase, base_id, current_user)
 
     rules = (
         db.query(RoutingRule)
@@ -241,10 +245,20 @@ def update_routing_rule(
     rule_id: uuid.UUID,
     body: RoutingRuleUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> RoutingRule:
-    rule = db.query(RoutingRule).filter(RoutingRule.id == rule_id).first()
+    # Get rule and verify it belongs to a base in user's account
+    rule = (
+        db.query(RoutingRule)
+        .join(LeadBase, RoutingRule.lead_base_id == LeadBase.id)
+        .filter(
+            RoutingRule.id == rule_id,
+            LeadBase.cuenta_id == current_user.cuenta_id
+        )
+        .first()
+    )
     if not rule:
-        raise HTTPException(status_code=404, detail="Routing rule not found")
+        raise HTTPException(status_code=404, detail="Routing rule not found or access denied")
 
     if body.campo is not None:
         rule.campo = body.campo
@@ -274,10 +288,20 @@ def update_routing_rule(
 def delete_routing_rule(
     rule_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> None:
-    rule = db.query(RoutingRule).filter(RoutingRule.id == rule_id).first()
+    # Get rule and verify it belongs to a base in user's account
+    rule = (
+        db.query(RoutingRule)
+        .join(LeadBase, RoutingRule.lead_base_id == LeadBase.id)
+        .filter(
+            RoutingRule.id == rule_id,
+            LeadBase.cuenta_id == current_user.cuenta_id
+        )
+        .first()
+    )
     if not rule:
-        raise HTTPException(status_code=404, detail="Routing rule not found")
+        raise HTTPException(status_code=404, detail="Routing rule not found or access denied")
 
     db.delete(rule)
     db.commit()
@@ -297,7 +321,13 @@ def list_leads_by_base(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
+    # Verify user has access to this account
+    if str(current_user.cuenta_id) != str(account_id):
+        raise HTTPException(status_code=403, detail="Access denied to this account")
+    
+    # Verify base belongs to this account
     base = db.query(LeadBase).filter(
         LeadBase.id == base_id, LeadBase.cuenta_id == account_id
     ).first()
@@ -340,14 +370,23 @@ def list_leads_by_base(
 def move_leads(
     body: MoveLeadsRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    target_base = db.query(LeadBase).filter(LeadBase.id == body.target_base_id).first()
+    # Verify target base belongs to user's account
+    target_base = db.query(LeadBase).filter(
+        LeadBase.id == body.target_base_id,
+        LeadBase.cuenta_id == current_user.cuenta_id
+    ).first()
     if not target_base:
-        raise HTTPException(status_code=404, detail="Target base not found")
+        raise HTTPException(status_code=404, detail="Target base not found or access denied")
 
+    # Only move leads that belong to the user's account
     moved = (
         db.query(Lead)
-        .filter(Lead.id.in_(body.lead_ids), Lead.cuenta_id == target_base.cuenta_id)
+        .filter(
+            Lead.id.in_(body.lead_ids), 
+            Lead.cuenta_id == current_user.cuenta_id
+        )
         .update({"lead_base_id": target_base.id}, synchronize_session="fetch")
     )
     db.commit()

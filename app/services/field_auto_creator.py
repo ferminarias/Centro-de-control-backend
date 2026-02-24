@@ -17,9 +17,11 @@ def auto_create_fields(
     cuenta_id: uuid.UUID,
     payload: dict[str, Any],
     existing_field_names: set[str],
+    max_fields: int = 50,
 ) -> list[str]:
     """Auto-create fields for keys not yet registered. Returns list of created field names."""
     created: list[str] = []
+    current_count = len(existing_field_names)
 
     for key, value in payload.items():
         if key in settings.EXCLUDED_FIELDS:
@@ -27,6 +29,13 @@ def auto_create_fields(
             continue
 
         if key in existing_field_names:
+            continue
+
+        if current_count + len(created) >= max_fields:
+            logger.warning(
+                "Field limit (%d) reached for account %s, skipping field '%s'",
+                max_fields, cuenta_id, key,
+            )
             continue
 
         tipo = infer_type(value)

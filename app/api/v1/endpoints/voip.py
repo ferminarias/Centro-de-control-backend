@@ -12,9 +12,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.core.multi_tenant import verify_tenant_access
 from app.core.security import verify_admin_key
 from app.models.account import Account
+from app.models.user import User
 from app.models.lead import Lead
 from app.models.campaign import Campania, TipoDiscador, EstadoCampania
 from app.models.voip import (
@@ -266,18 +269,23 @@ def list_agents(account_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @router.get("/agents/{agent_id}", response_model=AgentResponse, summary="Get agent details")
-def get_agent(agent_id: uuid.UUID, db: Session = Depends(get_db)):
-    agent = db.query(Agent).filter(Agent.id == agent_id).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+def get_agent(
+    agent_id: uuid.UUID, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    agent = verify_tenant_access(db, Agent, agent_id, current_user)
     return agent
 
 
 @router.put("/agents/{agent_id}", response_model=AgentResponse, summary="Update an agent")
-def update_agent(agent_id: uuid.UUID, body: AgentUpdate, db: Session = Depends(get_db)):
-    agent = db.query(Agent).filter(Agent.id == agent_id).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+def update_agent(
+    agent_id: uuid.UUID, 
+    body: AgentUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    agent = verify_tenant_access(db, Agent, agent_id, current_user)
     update_data = body.model_dump(exclude_unset=True)
     if "extension" in update_data:
         existing = db.query(Agent).filter(
@@ -295,10 +303,13 @@ def update_agent(agent_id: uuid.UUID, body: AgentUpdate, db: Session = Depends(g
 
 
 @router.put("/agents/{agent_id}/status", response_model=AgentResponse, summary="Update agent status")
-def update_agent_status(agent_id: uuid.UUID, body: AgentStatusUpdate, db: Session = Depends(get_db)):
-    agent = db.query(Agent).filter(Agent.id == agent_id).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+def update_agent_status(
+    agent_id: uuid.UUID, 
+    body: AgentStatusUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    agent = verify_tenant_access(db, Agent, agent_id, current_user)
     valid_states = {s.value for s in AgentStatus}
     if body.estado not in valid_states:
         raise HTTPException(status_code=400, detail=f"Invalid state. Must be one of: {', '.join(sorted(valid_states))}")
@@ -310,10 +321,12 @@ def update_agent_status(agent_id: uuid.UUID, body: AgentStatusUpdate, db: Sessio
 
 
 @router.delete("/agents/{agent_id}", status_code=204, summary="Delete an agent")
-def delete_agent(agent_id: uuid.UUID, db: Session = Depends(get_db)):
-    agent = db.query(Agent).filter(Agent.id == agent_id).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+def delete_agent(
+    agent_id: uuid.UUID, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    agent = verify_tenant_access(db, Agent, agent_id, current_user)
     db.delete(agent)
     db.commit()
 

@@ -18,7 +18,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 JWT_ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 30   # 30 minutes
+REFRESH_TOKEN_EXPIRE_DAYS = 7      # 7 days
 
 
 def hash_password(plain: str) -> str:
@@ -41,8 +42,21 @@ def create_access_token(
         "cuenta_id": str(cuenta_id),
         "role_id": str(role_id) if role_id else None,
         "permisos": permisos,
+        "type": "access",
         "iat": now,
         "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def create_refresh_token(user_id: uuid.UUID, cuenta_id: uuid.UUID) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "cuenta_id": str(cuenta_id),
+        "type": "refresh",
+        "iat": now,
+        "exp": now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=JWT_ALGORITHM)
 
@@ -54,6 +68,13 @@ def decode_token(token: str) -> dict:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
+def decode_refresh_token(token: str) -> dict:
+    data = decode_token(token)
+    if data.get("type") != "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    return data
 
 
 # ── Dependencies ───────────────────────────────────────────────────────────

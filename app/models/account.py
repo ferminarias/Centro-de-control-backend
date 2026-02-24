@@ -1,7 +1,8 @@
+import secrets
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,8 +19,14 @@ class Account(Base):
     api_key: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False, index=True
     )
+    # Secret for HMAC webhook signature verification (X-Signature header)
+    webhook_secret: Mapped[str] = mapped_column(
+        String(64), nullable=False, default=lambda: secrets.token_hex(32)
+    )
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
     auto_crear_campos: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Max custom fields per account (prevents unbounded table growth)
+    max_custom_fields: Mapped[int] = mapped_column(Integer, default=50)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

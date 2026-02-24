@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway status 2>&1)",
+      "Bash(railway whoami:*)",
+      "Bash(railway list:*)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway link 2>&1 << 'EOF'\nEOF)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway link --project \"Centro de Control\" --environment production 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway service 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway ps 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway --help 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway service --help 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway service status 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway service status --all 2>&1)",
+      "Bash(tail:*)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && git add app/api/v1/endpoints/auth.py && git commit -m \"fix: add request parameter to login endpoint for slowapi rate limiting\" && git push origin main 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && sleep 30 && railway service status --all 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && sleep 45 && railway service status --all 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && python -c \"\nimport sys\nsys.path.insert\\(0, '.'\\)\n# Try to detect import errors without running the full app\nimport ast, os\n\nerrors = []\nfor root, dirs, files in os.walk\\('app'\\):\n    dirs[:] = [d for d in dirs if d != '__pycache__']\n    for f in files:\n        if f.endswith\\('.py'\\):\n            path = os.path.join\\(root, f\\)\n            try:\n                with open\\(path\\) as fh:\n                    ast.parse\\(fh.read\\(\\)\\)\n            except SyntaxError as e:\n                errors.append\\(f'{path}: {e}'\\)\n\nif errors:\n    for e in errors:\n        print\\('SYNTAX ERROR:', e\\)\nelse:\n    print\\('No syntax errors found'\\)\n\" 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && git add app/tasks/automations.py && git commit -m \"fix: correct automation_engine imports and function signatures in celery tasks\" && git push origin main 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && sleep 60 && railway service status --all 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && git add app/api/v1/endpoints/voip.py && git commit -m \"fix: correct import path from app.models.Campania to app.models.campaign\" && git push origin main 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && sleep 75 && railway service status --all 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && git add app/main.py && git commit -m \"fix: replace limiter.middleware_class with SlowAPIMiddleware\" && git push origin main 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway variable --service web 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway variable --service Redis 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway variable --service web set \\\\\n  REDIS_URL=\"redis://default:zXoXsbfYZEUnVLEuMQTpvtAqGeVHTXzG@redis.railway.internal:6379\" \\\\\n  CELERY_BROKER_URL=\"redis://default:zXoXsbfYZEUnVLEuMQTpvtAqGeVHTXzG@redis.railway.internal:6379/0\" \\\\\n  CELERY_RESULT_BACKEND=\"redis://default:zXoXsbfYZEUnVLEuMQTpvtAqGeVHTXzG@redis.railway.internal:6379/0\" \\\\\n  ENVIRONMENT=\"production\" 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway service link web 2>&1)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && railway variable set \\\\\n  REDIS_URL=\"redis://default:zXoXsbfYZEUnVLEuMQTpvtAqGeVHTXzG@redis.railway.internal:6379\" \\\\\n  CELERY_BROKER_URL=\"redis://default:zXoXsbfYZEUnVLEuMQTpvtAqGeVHTXzG@redis.railway.internal:6379/0\" \\\\\n  CELERY_RESULT_BACKEND=\"redis://default:zXoXsbfYZEUnVLEuMQTpvtAqGeVHTXzG@redis.railway.internal:6379/0\" \\\\\n  ENVIRONMENT=\"production\" 2>&1)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(cd /c/Users/Fer/Documents/GitHub/Centro-de-control-backend && git add -A && git status 2>&1)"
+    ]
+  }
+}

@@ -368,7 +368,7 @@ Prioridad: MEDIA - Diferenciadores competitivos
 
 ---
 
-## 7. PRESUPUESTO ESTIMADO
+## 7sO
 
 ### Infraestructura Adicional (mensual)
 

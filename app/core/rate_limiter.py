@@ -37,18 +37,41 @@ def rate_limit(requests: int, window: str):
     return limiter.limit(f"{requests}/{window}")
 
 
+def _tenant_key(request: Request) -> str:
+    """
+    Rate limit key function: uses cuenta_id from JWT if available,
+    falls back to IP. This prevents one tenant from starving others.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        try:
+            import jwt as pyjwt
+            from app.core.config import settings
+            token = auth_header[7:]
+            payload = pyjwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+            cuenta_id = payload.get("cuenta_id")
+            if cuenta_id:
+                return f"tenant:{cuenta_id}"
+        except Exception:
+            pass
+    return get_remote_address(request)
+
+
+def rate_limit_per_tenant(requests: int, window: str):
+    """Rate limit per tenant (cuenta_id), falls back to IP for unauthenticated requests."""
+    return limiter.limit(f"{requests}/{window}", key_func=_tenant_key)
+
+
 def rate_limit_per_user(requests: int, window: str):
     """
     Rate limit per authenticated user (uses user ID if available, IP otherwise).
     """
     def key_func(request: Request):
-        # Try to get user ID from request state (set by auth middleware)
         user_id = getattr(request.state, "user_id", None)
         if user_id:
             return f"user:{user_id}"
-        # Fallback to IP address
         return get_remote_address(request)
-    
+
     return limiter.limit(f"{requests}/{window}", key_func=key_func)
 
 

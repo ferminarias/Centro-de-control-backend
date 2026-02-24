@@ -4,9 +4,12 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.core.multi_tenant import verify_tenant_access
 from app.core.security import verify_admin_key
 from app.models.account import Account
+from app.models.user import User
 from app.models.automation import (
     Automation,
     AutomationAction,
@@ -169,10 +172,9 @@ def list_automations(
 def get_automation(
     automation_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    auto = db.query(Automation).filter(Automation.id == automation_id).first()
-    if not auto:
-        raise HTTPException(status_code=404, detail="Automation not found")
+    auto = verify_tenant_access(db, Automation, automation_id, current_user)
     return _automation_to_response(auto)
 
 
@@ -185,10 +187,9 @@ def update_automation(
     automation_id: uuid.UUID,
     body: AutomationUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    auto = db.query(Automation).filter(Automation.id == automation_id).first()
-    if not auto:
-        raise HTTPException(status_code=404, detail="Automation not found")
+    auto = verify_tenant_access(db, Automation, automation_id, current_user)
 
     if body.nombre is not None:
         auto.nombre = body.nombre

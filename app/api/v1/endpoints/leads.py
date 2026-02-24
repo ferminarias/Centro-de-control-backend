@@ -1,19 +1,25 @@
 import io
+import json
 import logging
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from openpyxl import Workbook, load_workbook
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.core.multi_tenant import verify_tenant_access, TenantContext, get_tenant_context
 from app.core.security import verify_admin_key
 from app.models.account import Account
 from app.models.field import CustomField
 from app.models.lead import Lead
 from app.models.lead_base import LeadBase
 from app.models.lote import Lote
+from app.models.user import User
 from app.schemas.lead import BulkUpdateResponse, LeadListResponse, LeadResponse
 from app.utils.column_manager import sync_lead_columns
 
@@ -39,35 +45,81 @@ def _lead_to_dict(lead: Lead, base_nombre: str | None = None, lote_nombre: str |
 @router.get(
     "/accounts/{account_id}/leads",
     response_model=LeadListResponse,
-    summary="List leads for an account",
+    summary="List leads for an account with advanced filters",
 )
 def list_leads(
     account_id: uuid.UUID,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    # Search
+    search: str | None = Query(None, description="Full-text search on nombre, email, telefono"),
+    # Filters
+    lead_base_id: uuid.UUID | None = Query(None),
+    lote_id: uuid.UUID | None = Query(None),
+    assigned_to: uuid.UUID | None = Query(None),
+    tipificacion_id: uuid.UUID | None = Query(None),
+    temperatura: str | None = Query(None, description="frio, tibio, caliente"),
+    score_min: int | None = Query(None, ge=0, le=100),
+    score_max: int | None = Query(None, ge=0, le=100),
+    created_after: datetime | None = Query(None),
+    created_before: datetime | None = Query(None),
+    # Sorting
+    order_by: str = Query("created_at", description="created_at, score, id_lead"),
+    order_dir: str = Query("desc", description="asc or desc"),
     db: Session = Depends(get_db),
 ) -> dict:
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    # Use eager loading to prevent N+1 queries
     query = (
         db.query(Lead)
-        .options(
-            joinedload(Lead.lead_base),
-            joinedload(Lead.lote)
-        )
+        .options(joinedload(Lead.lead_base), joinedload(Lead.lote))
         .filter(Lead.cuenta_id == account_id)
     )
-    
-    total = db.query(Lead).filter(Lead.cuenta_id == account_id).count()
-    leads = (
-        query.order_by(Lead.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
-    )
+
+    # Full-text search across JSONB fields
+    if search:
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Lead.datos["nombre"].astext.ilike(term),
+                Lead.datos["email"].astext.ilike(term),
+                Lead.datos["telefono"].astext.ilike(term),
+                Lead.datos["phone"].astext.ilike(term),
+                Lead.datos["apellido"].astext.ilike(term),
+            )
+        )
+
+    if lead_base_id:
+        query = query.filter(Lead.lead_base_id == lead_base_id)
+    if lote_id:
+        query = query.filter(Lead.lote_id == lote_id)
+    if assigned_to:
+        query = query.filter(Lead.assigned_to == assigned_to)
+    if tipificacion_id:
+        query = query.filter(Lead.tipificacion_id == tipificacion_id)
+    if temperatura:
+        query = query.filter(Lead.temperatura == temperatura)
+    if score_min is not None:
+        query = query.filter(Lead.score >= score_min)
+    if score_max is not None:
+        query = query.filter(Lead.score <= score_max)
+    if created_after:
+        query = query.filter(Lead.created_at >= created_after)
+    if created_before:
+        query = query.filter(Lead.created_at <= created_before)
+
+    # Sorting
+    sort_col = {
+        "created_at": Lead.created_at,
+        "score": Lead.score,
+        "id_lead": Lead.id_lead,
+    }.get(order_by, Lead.created_at)
+    query = query.order_by(sort_col.desc() if order_dir == "desc" else sort_col.asc())
+
+    total = query.count()
+    leads = query.offset((page - 1) * page_size).limit(page_size).all()
 
     items = [
         _lead_to_dict(
@@ -89,20 +141,27 @@ def list_leads(
 def get_lead(
     lead_id: uuid.UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    lead = db.query(Lead).filter(Lead.id == lead_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
+    # Verify tenant access - lead must belong to user's account
+    lead = verify_tenant_access(db, Lead, lead_id, current_user)
+    
+    # Also verify lead_base and lote belong to same tenant
     base_nombre = None
     if lead.lead_base_id:
-        base = db.query(LeadBase.nombre).filter(LeadBase.id == lead.lead_base_id).first()
+        base = db.query(LeadBase.nombre).filter(
+            LeadBase.id == lead.lead_base_id,
+            LeadBase.cuenta_id == current_user.cuenta_id
+        ).first()
         if base:
             base_nombre = base.nombre
 
     lote_nombre = None
     if lead.lote_id:
-        lote = db.query(Lote.nombre).filter(Lote.id == lead.lote_id).first()
+        lote = db.query(Lote.nombre).filter(
+            Lote.id == lead.lote_id,
+            Lote.cuenta_id == current_user.cuenta_id
+        ).first()
         if lote:
             lote_nombre = lote.nombre
 
@@ -262,3 +321,75 @@ def bulk_update_leads(
         "not_found_ids": not_found_ids,
         "errors": errors,
     }
+
+
+# ---------------------------------------------------------------------------
+# GDPR / Data compliance
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/leads/{lead_id}/export",
+    summary="Export all data for a lead (GDPR right of access)",
+)
+def export_lead_data(
+    lead_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Return all stored data for a lead as JSON (GDPR right of access)."""
+    lead = verify_tenant_access(db, Lead, lead_id, current_user)
+
+    export = {
+        "lead_id": str(lead.id),
+        "id_lead": lead.id_lead,
+        "cuenta_id": str(lead.cuenta_id),
+        "created_at": lead.created_at.isoformat() if lead.created_at else None,
+        "updated_at": lead.updated_at.isoformat() if lead.updated_at else None,
+        "datos": lead.datos,
+        "score": lead.score,
+        "temperatura": lead.temperatura,
+        "assigned_to": str(lead.assigned_to) if lead.assigned_to else None,
+    }
+
+    filename = f"lead_{lead.id_lead}_export.json"
+    return JSONResponse(
+        content=export,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.delete(
+    "/leads/{lead_id}/forget",
+    summary="Anonymize lead PII (GDPR right to be forgotten)",
+    status_code=200,
+)
+def forget_lead(
+    lead_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Anonymize personally identifiable information for a lead.
+    Preserves the lead record for analytics but removes PII.
+    """
+    lead = verify_tenant_access(db, Lead, lead_id, current_user)
+
+    _PII_FIELDS = {"nombre", "apellido", "email", "correo", "telefono", "phone",
+                   "tel", "celular", "dni", "rut", "direccion", "address"}
+
+    anonymized = dict(lead.datos)
+    fields_cleared = []
+    for field in _PII_FIELDS:
+        if field in anonymized:
+            anonymized[field] = "[ANONIMIZADO]"
+            fields_cleared.append(field)
+
+    lead.datos = anonymized
+    db.commit()
+
+    logger.info(
+        "Lead %s anonymized by user %s — fields: %s",
+        lead_id, current_user.id, fields_cleared,
+    )
+
+    return {"success": True, "fields_anonymized": fields_cleared}
