@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.auth import create_access_token, get_current_user, verify_password
@@ -21,6 +21,7 @@ router = APIRouter()
 )
 @rate_limit(5, "1/minute")  # 5 attempts per minute
 def login(
+    request: Request,
     body: LoginRequest,
     db: Session = Depends(get_db),
 ) -> dict:
