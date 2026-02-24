@@ -1,18 +1,21 @@
 import logging
+import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.router import api_router
 from app.core.audit_middleware import AuditMiddleware
+from app.core.config import settings
 from app.core.database import Base, engine
+from app.core.logging_config import configure_logging
+from app.core.metrics import MetricsMiddleware, get_metrics_response
+from app.core.rate_limiter import limiter, custom_rate_limit_handler
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-
-logger = logging.getLogger(__name__)
+# Configure structured logging
+logger = configure_logging(settings.ENVIRONMENT)
 
 # Import all models so Base.metadata knows about them
 import app.models  # noqa: F401
@@ -248,20 +251,48 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Setup rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, custom_rate_limit_handler)
+
+# Parse allowed origins from settings
+# Supports comma-separated list: "https://a.com,https://b.com"
+_allowed_origins = [
+    origin.strip()
+    for origin in settings.ALLOWED_ORIGINS.split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+    expose_headers=["X-Total-Count"],
     max_age=3600,
+)
+
+# Middleware de métricas (primero para capturar todo)
+app.add_middleware(MetricsMiddleware)
+
+# Middleware de rate limiting
+app.add_middleware(
+    limiter.middleware_class,
+    key_func=lambda request: request.client.host if request.client else "unknown"
 )
 
 # Middleware de auditoría automática
 app.add_middleware(AuditMiddleware)
 
 app.include_router(api_router)
+
+
+# Metrics endpoint
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    """Prometheus metrics endpoint."""
+    return get_metrics_response()
 
 
 @app.get("/health", tags=["Health"])

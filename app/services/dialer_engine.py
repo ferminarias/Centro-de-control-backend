@@ -1,8 +1,8 @@
-"""
-Dialer Engine — orchestrates call campaigns.
+﻿"""
+Dialer Engine â€” orchestrates call campaigns.
 
 Modes:
-  - Manual: Agent clicks "call" → originate via AMI
+  - Manual: Agent clicks "call" â†’ originate via AMI
   - Progressive: System dials next lead when agent becomes available (1:1 ratio)
   - Predictive: System dials multiple leads per available agent (ratio-based)
 
@@ -18,8 +18,9 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.models.campaign import Campania
 from app.models.voip import (
-    Agent, AgentStatus, Campaign, CampaignAgent, CampaignLead,
+    Agent, AgentStatus, CampaignAgent, CampaignLead,
     CampaignLeadStatus, CampaignStatus, DncEntry,
 )
 from app.services.ami_manager import OriginateResult, ami_manager
@@ -51,11 +52,11 @@ def manual_call(
 
     cl = db.query(CampaignLead).filter(CampaignLead.id == campaign_lead_id).first()
     if not cl:
-        return OriginateResult(success=False, message="Campaign lead not found")
+        return OriginateResult(success=False, message="Campania lead not found")
 
-    campaign = db.query(Campaign).filter(Campaign.id == cl.campaign_id).first()
-    if not campaign:
-        return OriginateResult(success=False, message="Campaign not found")
+    Campania = db.query(Campania).filter(Campania.id == cl.campaign_id).first()
+    if not Campania:
+        return OriginateResult(success=False, message="Campania not found")
 
     # Check DNC
     is_dnc = db.query(DncEntry).filter(
@@ -68,7 +69,7 @@ def manual_call(
         return OriginateResult(success=False, message="Number is on DNC list")
 
     # Check max retries
-    if cl.intentos >= campaign.max_retries:
+    if cl.intentos >= Campania.max_retries:
         return OriginateResult(success=False, message="Max retries reached for this lead")
 
     return ami_manager.originate_call(
@@ -76,14 +77,14 @@ def manual_call(
         cuenta_id=cuenta_id,
         agent=agent,
         destino=cl.telefono,
-        campaign=campaign,
+        Campania=Campania,
         campaign_lead=cl,
     )
 
 
-def get_next_lead(db: Session, campaign: Campaign) -> CampaignLead | None:
+def get_next_lead(db: Session, Campania: Campania) -> CampaignLead | None:
     """
-    Get the next lead to dial for a campaign.
+    Get the next lead to dial for a Campania.
     Priority: callbacks first, then scheduled retries, then pending.
     """
     now = datetime.now(timezone.utc)
@@ -92,7 +93,7 @@ def get_next_lead(db: Session, campaign: Campaign) -> CampaignLead | None:
     callback_lead = (
         db.query(CampaignLead)
         .filter(
-            CampaignLead.campaign_id == campaign.id,
+            CampaignLead.campaign_id == Campania.id,
             CampaignLead.estado == CampaignLeadStatus.SCHEDULED.value,
             CampaignLead.callback_at <= now,
         )
@@ -106,13 +107,13 @@ def get_next_lead(db: Session, campaign: Campaign) -> CampaignLead | None:
     retry_lead = (
         db.query(CampaignLead)
         .filter(
-            CampaignLead.campaign_id == campaign.id,
+            CampaignLead.campaign_id == Campania.id,
             CampaignLead.estado.in_([
                 CampaignLeadStatus.NO_ANSWER.value,
                 CampaignLeadStatus.BUSY.value,
                 CampaignLeadStatus.FAILED.value,
             ]),
-            CampaignLead.intentos < campaign.max_retries,
+            CampaignLead.intentos < Campania.max_retries,
             CampaignLead.proximo_intento <= now,
         )
         .order_by(CampaignLead.proximo_intento)
@@ -125,7 +126,7 @@ def get_next_lead(db: Session, campaign: Campaign) -> CampaignLead | None:
     pending_lead = (
         db.query(CampaignLead)
         .filter(
-            CampaignLead.campaign_id == campaign.id,
+            CampaignLead.campaign_id == Campania.id,
             CampaignLead.estado == CampaignLeadStatus.PENDING.value,
         )
         .order_by(CampaignLead.created_at)
@@ -135,7 +136,7 @@ def get_next_lead(db: Session, campaign: Campaign) -> CampaignLead | None:
 
 
 def get_available_agents(db: Session, campaign_id: uuid.UUID) -> list[Agent]:
-    """Get agents assigned to a campaign that are currently available."""
+    """Get agents assigned to a Campania that are currently available."""
     agent_ids = (
         db.query(CampaignAgent.agent_id)
         .filter(CampaignAgent.campaign_id == campaign_id)
@@ -153,7 +154,7 @@ def get_available_agents(db: Session, campaign_id: uuid.UUID) -> list[Agent]:
 
 
 def get_active_calls_count(db: Session, campaign_id: uuid.UUID) -> int:
-    """Count currently dialing/active calls for a campaign."""
+    """Count currently dialing/active calls for a Campania."""
     return (
         db.query(CampaignLead)
         .filter(
@@ -164,14 +165,14 @@ def get_active_calls_count(db: Session, campaign_id: uuid.UUID) -> int:
     )
 
 
-def is_campaign_in_schedule(campaign: Campaign) -> bool:
-    """Check if the current time is within the campaign's schedule window."""
-    if not campaign.hora_inicio or not campaign.hora_fin:
+def is_campaign_in_schedule(Campania: Campania) -> bool:
+    """Check if the current time is within the Campania's schedule window."""
+    if not Campania.hora_inicio or not Campania.hora_fin:
         return True  # No schedule restriction
 
     try:
         import zoneinfo
-        tz = zoneinfo.ZoneInfo(campaign.timezone)
+        tz = zoneinfo.ZoneInfo(Campania.timezone)
     except Exception:
         tz = timezone.utc
 
@@ -179,41 +180,41 @@ def is_campaign_in_schedule(campaign: Campaign) -> bool:
     current_time = now.time()
     current_dow = now.isoweekday()  # 1=Mon, 7=Sun
 
-    if campaign.dias_semana and current_dow not in campaign.dias_semana:
+    if Campania.dias_semana and current_dow not in Campania.dias_semana:
         return False
 
-    return campaign.hora_inicio <= current_time <= campaign.hora_fin
+    return Campania.hora_inicio <= current_time <= Campania.hora_fin
 
 
-def run_progressive_dialer(db: Session, campaign: Campaign) -> list[OriginateResult]:
+def run_progressive_dialer(db: Session, Campania: Campania) -> list[OriginateResult]:
     """
     Progressive dialer: 1 call per available agent.
     Called periodically by a scheduler.
     """
-    if campaign.estado != CampaignStatus.RUNNING.value:
+    if Campania.estado != CampaignStatus.RUNNING.value:
         return []
 
-    if not is_campaign_in_schedule(campaign):
+    if not is_campaign_in_schedule(Campania):
         return []
 
-    available = get_available_agents(db, campaign.id)
+    available = get_available_agents(db, Campania.id)
     if not available:
         return []
 
-    active_calls = get_active_calls_count(db, campaign.id)
-    max_new = campaign.max_concurrent_calls - active_calls
+    active_calls = get_active_calls_count(db, Campania.id)
+    max_new = Campania.max_concurrent_calls - active_calls
     if max_new <= 0:
         return []
 
     results = []
     for agent in available[:max_new]:
-        lead = get_next_lead(db, campaign)
+        lead = get_next_lead(db, Campania)
         if not lead:
             break
 
         # Check DNC
         is_dnc = db.query(DncEntry).filter(
-            DncEntry.cuenta_id == campaign.cuenta_id,
+            DncEntry.cuenta_id == Campania.cuenta_id,
             DncEntry.telefono == lead.telefono,
         ).first()
         if is_dnc:
@@ -223,10 +224,10 @@ def run_progressive_dialer(db: Session, campaign: Campaign) -> list[OriginateRes
 
         result = ami_manager.originate_call(
             db,
-            cuenta_id=campaign.cuenta_id,
+            cuenta_id=Campania.cuenta_id,
             agent=agent,
             destino=lead.telefono,
-            campaign=campaign,
+            Campania=Campania,
             campaign_lead=lead,
         )
         results.append(result)
@@ -234,40 +235,40 @@ def run_progressive_dialer(db: Session, campaign: Campaign) -> list[OriginateRes
     return results
 
 
-def run_predictive_dialer(db: Session, campaign: Campaign) -> list[OriginateResult]:
+def run_predictive_dialer(db: Session, Campania: Campania) -> list[OriginateResult]:
     """
     Predictive dialer: dials (ratio * available_agents) calls.
     Excess answered calls queue for next available agent.
     """
-    if campaign.estado != CampaignStatus.RUNNING.value:
+    if Campania.estado != CampaignStatus.RUNNING.value:
         return []
 
-    if not is_campaign_in_schedule(campaign):
+    if not is_campaign_in_schedule(Campania):
         return []
 
-    available_count = len(get_available_agents(db, campaign.id))
+    available_count = len(get_available_agents(db, Campania.id))
     if available_count == 0:
         return []
 
-    active_calls = get_active_calls_count(db, campaign.id)
-    target_calls = int(available_count * campaign.predictive_ratio)
-    max_new = min(target_calls - active_calls, campaign.max_concurrent_calls - active_calls)
+    active_calls = get_active_calls_count(db, Campania.id)
+    target_calls = int(available_count * Campania.predictive_ratio)
+    max_new = min(target_calls - active_calls, Campania.max_concurrent_calls - active_calls)
     if max_new <= 0:
         return []
 
     # For predictive, we get all available agents and cycle through them
-    agents = get_available_agents(db, campaign.id)
+    agents = get_available_agents(db, Campania.id)
     results = []
     agent_idx = 0
 
     for _ in range(max_new):
-        lead = get_next_lead(db, campaign)
+        lead = get_next_lead(db, Campania)
         if not lead:
             break
 
         # Check DNC
         is_dnc = db.query(DncEntry).filter(
-            DncEntry.cuenta_id == campaign.cuenta_id,
+            DncEntry.cuenta_id == Campania.cuenta_id,
             DncEntry.telefono == lead.telefono,
         ).first()
         if is_dnc:
@@ -280,10 +281,10 @@ def run_predictive_dialer(db: Session, campaign: Campaign) -> list[OriginateResu
 
         result = ami_manager.originate_call(
             db,
-            cuenta_id=campaign.cuenta_id,
+            cuenta_id=Campania.cuenta_id,
             agent=agent,
             destino=lead.telefono,
-            campaign=campaign,
+            Campania=Campania,
             campaign_lead=lead,
         )
         results.append(result)
@@ -292,9 +293,9 @@ def run_predictive_dialer(db: Session, campaign: Campaign) -> list[OriginateResu
 
 
 def update_campaign_stats(db: Session, campaign_id: uuid.UUID) -> None:
-    """Recalculate cached campaign metrics from campaign_leads."""
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
+    """Recalculate cached Campania metrics from campaign_leads."""
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
         return
 
     total = db.query(func.count(CampaignLead.id)).filter(
@@ -316,19 +317,19 @@ def update_campaign_stats(db: Session, campaign_id: uuid.UUID) -> None:
         CampaignLead.estado == CampaignLeadStatus.PENDING.value,
     ).scalar() or 0
 
-    campaign.total_leads = total
-    campaign.leads_contacted = contacted + completed
-    campaign.leads_pending = pending
+    Campania.total_leads = total
+    Campania.leads_contacted = contacted + completed
+    Campania.leads_pending = pending
     db.commit()
 
 
 def set_lead_retry(
     db: Session,
     campaign_lead: CampaignLead,
-    campaign: Campaign,
+    Campania: Campania,
 ) -> None:
-    """Schedule the next retry for a campaign lead."""
+    """Schedule the next retry for a Campania lead."""
     campaign_lead.proximo_intento = datetime.now(timezone.utc) + timedelta(
-        minutes=campaign.retry_delay_minutes
+        minutes=Campania.retry_delay_minutes
     )
     db.commit()

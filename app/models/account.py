@@ -66,8 +66,8 @@ class Account(Base):
     dispositions: Mapped[list["Disposition"]] = relationship(  # noqa: F821
         cascade="all, delete-orphan"
     )
-    campaigns: Mapped[list["Campaign"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
+    campaigns: Mapped[list["Campania"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
     )
     ui_modules: Mapped[list["UIModule"]] = relationship(  # noqa: F821
         back_populates="account", cascade="all, delete-orphan"

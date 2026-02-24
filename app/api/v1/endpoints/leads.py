@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook, load_workbook
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.security import verify_admin_key
@@ -51,8 +51,17 @@ def list_leads(
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    query = db.query(Lead).filter(Lead.cuenta_id == account_id)
-    total = query.count()
+    # Use eager loading to prevent N+1 queries
+    query = (
+        db.query(Lead)
+        .options(
+            joinedload(Lead.lead_base),
+            joinedload(Lead.lote)
+        )
+        .filter(Lead.cuenta_id == account_id)
+    )
+    
+    total = db.query(Lead).filter(Lead.cuenta_id == account_id).count()
     leads = (
         query.order_by(Lead.created_at.desc())
         .offset((page - 1) * page_size)
@@ -60,25 +69,11 @@ def list_leads(
         .all()
     )
 
-    # Fetch base names
-    base_ids = {l.lead_base_id for l in leads if l.lead_base_id}
-    base_names: dict[uuid.UUID, str] = {}
-    if base_ids:
-        bases = db.query(LeadBase.id, LeadBase.nombre).filter(LeadBase.id.in_(base_ids)).all()
-        base_names = {b.id: b.nombre for b in bases}
-
-    # Fetch lote names
-    lote_ids = {l.lote_id for l in leads if l.lote_id}
-    lote_names: dict[uuid.UUID, str] = {}
-    if lote_ids:
-        lotes = db.query(Lote.id, Lote.nombre).filter(Lote.id.in_(lote_ids)).all()
-        lote_names = {lo.id: lo.nombre for lo in lotes}
-
     items = [
         _lead_to_dict(
             lead,
-            base_names.get(lead.lead_base_id) if lead.lead_base_id else None,
-            lote_names.get(lead.lote_id) if lead.lote_id else None,
+            lead.lead_base.nombre if lead.lead_base else None,
+            lead.lote.nombre if lead.lote else None,
         )
         for lead in leads
     ]

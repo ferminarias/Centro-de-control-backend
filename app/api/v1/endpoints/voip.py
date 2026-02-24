@@ -1,4 +1,4 @@
-"""
+﻿"""
 VoIP / Call Center API endpoints.
 
 Covers: SIP Providers, SIP Trunks, PBX Nodes, Agents, Dispositions,
@@ -16,9 +16,10 @@ from app.core.database import get_db
 from app.core.security import verify_admin_key
 from app.models.account import Account
 from app.models.lead import Lead
+from app.models.Campania import Campania, TipoDiscador, EstadoCampania
 from app.models.voip import (
-    Agent, AgentStatus, CallEvent, CallRecord, Campaign, CampaignAgent,
-    CampaignLead, CampaignLeadStatus, CampaignStatus, Disposition,
+    Agent, AgentStatus, CallEvent, CallRecord, CampaignAgent,
+    CampaignLead, CampaignLeadStatus, Disposition,
     DncEntry, PbxNode, SipProvider, SipTrunk,
 )
 from app.schemas.voip import (
@@ -40,7 +41,7 @@ from app.services.dialer_engine import manual_call, update_campaign_stats
 router = APIRouter(dependencies=[Depends(verify_admin_key)])
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _get_account(db: Session, account_id: uuid.UUID) -> Account:
     account = db.query(Account).filter(Account.id == account_id).first()
@@ -49,9 +50,9 @@ def _get_account(db: Session, account_id: uuid.UUID) -> Account:
     return account
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # SIP Providers
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post(
     "/accounts/{account_id}/sip-providers",
@@ -106,9 +107,9 @@ def delete_sip_provider(provider_id: uuid.UUID, db: Session = Depends(get_db)):
     db.commit()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # SIP Trunks
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post(
     "/sip-providers/{provider_id}/trunks",
@@ -161,9 +162,9 @@ def delete_sip_trunk(trunk_id: uuid.UUID, db: Session = Depends(get_db)):
     db.commit()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # PBX Nodes
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post(
     "/accounts/{account_id}/pbx-nodes",
@@ -226,9 +227,9 @@ def check_pbx_node_health(node_id: uuid.UUID, db: Session = Depends(get_db)):
     return result
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Agents
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post(
     "/accounts/{account_id}/agents",
@@ -317,9 +318,9 @@ def delete_agent(agent_id: uuid.UUID, db: Session = Depends(get_db)):
     db.commit()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Dispositions
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post(
     "/accounts/{account_id}/dispositions",
@@ -375,25 +376,25 @@ def delete_disposition(disposition_id: uuid.UUID, db: Session = Depends(get_db))
     db.commit()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Campaigns
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post(
     "/accounts/{account_id}/campaigns",
     response_model=CampaignResponse,
     status_code=201,
-    summary="Create a campaign",
+    summary="Create a Campania",
 )
 def create_campaign(account_id: uuid.UUID, body: CampaignCreate, db: Session = Depends(get_db)):
     _get_account(db, account_id)
-    campaign = Campaign(cuenta_id=account_id)
+    Campania = Campania(cuenta_id=account_id)
     for field, value in body.model_dump().items():
-        setattr(campaign, field, value)
-    db.add(campaign)
+        setattr(Campania, field, value)
+    db.add(Campania)
     db.commit()
-    db.refresh(campaign)
-    return campaign
+    db.refresh(Campania)
+    return Campania
 
 
 @router.get(
@@ -403,99 +404,99 @@ def create_campaign(account_id: uuid.UUID, body: CampaignCreate, db: Session = D
 )
 def list_campaigns(account_id: uuid.UUID, db: Session = Depends(get_db)):
     _get_account(db, account_id)
-    items = db.query(Campaign).filter(Campaign.cuenta_id == account_id).order_by(Campaign.created_at.desc()).all()
+    items = db.query(Campania).filter(Campania.cuenta_id == account_id).order_by(Campania.created_at.desc()).all()
     return {"items": items, "total": len(items)}
 
 
-@router.get("/campaigns/{campaign_id}", response_model=CampaignResponse, summary="Get campaign details")
+@router.get("/campaigns/{campaign_id}", response_model=CampaignResponse, summary="Get Campania details")
 def get_campaign(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    return campaign
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
+    return Campania
 
 
-@router.put("/campaigns/{campaign_id}", response_model=CampaignResponse, summary="Update a campaign")
+@router.put("/campaigns/{campaign_id}", response_model=CampaignResponse, summary="Update a Campania")
 def update_campaign(campaign_id: uuid.UUID, body: CampaignUpdate, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    if campaign.estado == CampaignStatus.RUNNING.value:
-        raise HTTPException(status_code=400, detail="Cannot update a running campaign. Pause it first.")
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
+    if Campania.estado == CampaignStatus.RUNNING.value:
+        raise HTTPException(status_code=400, detail="Cannot update a running Campania. Pause it first.")
     for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(campaign, field, value)
+        setattr(Campania, field, value)
     db.commit()
-    db.refresh(campaign)
-    return campaign
+    db.refresh(Campania)
+    return Campania
 
 
-@router.delete("/campaigns/{campaign_id}", status_code=204, summary="Delete a campaign")
+@router.delete("/campaigns/{campaign_id}", status_code=204, summary="Delete a Campania")
 def delete_campaign(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    if campaign.estado == CampaignStatus.RUNNING.value:
-        raise HTTPException(status_code=400, detail="Cannot delete a running campaign")
-    db.delete(campaign)
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
+    if Campania.estado == CampaignStatus.RUNNING.value:
+        raise HTTPException(status_code=400, detail="Cannot delete a running Campania")
+    db.delete(Campania)
     db.commit()
 
 
-# ─── Campaign state transitions ──────────────────────────────────────────────
+# â”€â”€â”€ Campania state transitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-@router.post("/campaigns/{campaign_id}/start", response_model=CampaignResponse, summary="Start a campaign")
+@router.post("/campaigns/{campaign_id}/start", response_model=CampaignResponse, summary="Start a Campania")
 def start_campaign(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    if campaign.estado not in (CampaignStatus.DRAFT.value, CampaignStatus.PAUSED.value, CampaignStatus.STOPPED.value):
-        raise HTTPException(status_code=400, detail=f"Cannot start campaign in state '{campaign.estado}'")
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
+    if Campania.estado not in (CampaignStatus.DRAFT.value, CampaignStatus.PAUSED.value, CampaignStatus.STOPPED.value):
+        raise HTTPException(status_code=400, detail=f"Cannot start Campania in state '{Campania.estado}'")
     # Validate requirements
-    if campaign.dialer_mode != "manual":
+    if Campania.dialer_mode != "manual":
         agents_count = db.query(CampaignAgent).filter(CampaignAgent.campaign_id == campaign_id).count()
         if agents_count == 0:
             raise HTTPException(status_code=400, detail="Assign at least one agent before starting")
     leads_count = db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign_id).count()
     if leads_count == 0:
         raise HTTPException(status_code=400, detail="Add at least one lead before starting")
-    campaign.estado = CampaignStatus.RUNNING.value
+    Campania.estado = CampaignStatus.RUNNING.value
     update_campaign_stats(db, campaign_id)
     db.commit()
-    db.refresh(campaign)
-    return campaign
+    db.refresh(Campania)
+    return Campania
 
 
-@router.post("/campaigns/{campaign_id}/pause", response_model=CampaignResponse, summary="Pause a campaign")
+@router.post("/campaigns/{campaign_id}/pause", response_model=CampaignResponse, summary="Pause a Campania")
 def pause_campaign(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    if campaign.estado != CampaignStatus.RUNNING.value:
-        raise HTTPException(status_code=400, detail="Campaign is not running")
-    campaign.estado = CampaignStatus.PAUSED.value
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
+    if Campania.estado != CampaignStatus.RUNNING.value:
+        raise HTTPException(status_code=400, detail="Campania is not running")
+    Campania.estado = CampaignStatus.PAUSED.value
     db.commit()
-    db.refresh(campaign)
-    return campaign
+    db.refresh(Campania)
+    return Campania
 
 
-@router.post("/campaigns/{campaign_id}/stop", response_model=CampaignResponse, summary="Stop a campaign")
+@router.post("/campaigns/{campaign_id}/stop", response_model=CampaignResponse, summary="Stop a Campania")
 def stop_campaign(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    if campaign.estado not in (CampaignStatus.RUNNING.value, CampaignStatus.PAUSED.value):
-        raise HTTPException(status_code=400, detail="Campaign is not running or paused")
-    campaign.estado = CampaignStatus.STOPPED.value
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
+    if Campania.estado not in (CampaignStatus.RUNNING.value, CampaignStatus.PAUSED.value):
+        raise HTTPException(status_code=400, detail="Campania is not running or paused")
+    Campania.estado = CampaignStatus.STOPPED.value
     db.commit()
-    db.refresh(campaign)
-    return campaign
+    db.refresh(Campania)
+    return Campania
 
 
-# ─── Campaign Agents ──────────────────────────────────────────────────────────
+# â”€â”€â”€ Campania Agents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.post(
     "/campaigns/{campaign_id}/agents/{agent_id}",
     status_code=201,
-    summary="Assign agent to campaign",
+    summary="Assign agent to Campania",
 )
 def assign_agent_to_campaign(
     campaign_id: uuid.UUID,
@@ -503,17 +504,17 @@ def assign_agent_to_campaign(
     prioridad: int = 0,
     db: Session = Depends(get_db),
 ):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.cuenta_id == campaign.cuenta_id).first()
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
+    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.cuenta_id == Campania.cuenta_id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found in this account")
     existing = db.query(CampaignAgent).filter(
         CampaignAgent.campaign_id == campaign_id, CampaignAgent.agent_id == agent_id
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Agent already assigned to this campaign")
+        raise HTTPException(status_code=400, detail="Agent already assigned to this Campania")
     ca = CampaignAgent(campaign_id=campaign_id, agent_id=agent_id, prioridad=prioridad)
     db.add(ca)
     db.commit()
@@ -523,23 +524,23 @@ def assign_agent_to_campaign(
 @router.delete(
     "/campaigns/{campaign_id}/agents/{agent_id}",
     status_code=204,
-    summary="Remove agent from campaign",
+    summary="Remove agent from Campania",
 )
 def remove_agent_from_campaign(campaign_id: uuid.UUID, agent_id: uuid.UUID, db: Session = Depends(get_db)):
     ca = db.query(CampaignAgent).filter(
         CampaignAgent.campaign_id == campaign_id, CampaignAgent.agent_id == agent_id
     ).first()
     if not ca:
-        raise HTTPException(status_code=404, detail="Agent not assigned to this campaign")
+        raise HTTPException(status_code=404, detail="Agent not assigned to this Campania")
     db.delete(ca)
     db.commit()
 
 
-@router.get("/campaigns/{campaign_id}/agents", summary="List agents assigned to campaign")
+@router.get("/campaigns/{campaign_id}/agents", summary="List agents assigned to Campania")
 def list_campaign_agents(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
     cas = (
         db.query(CampaignAgent)
         .filter(CampaignAgent.campaign_id == campaign_id)
@@ -560,29 +561,29 @@ def list_campaign_agents(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
     return {"items": items, "total": len(items)}
 
 
-# ─── Campaign Leads ──────────────────────────────────────────────────────────
+# â”€â”€â”€ Campania Leads â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.post(
     "/campaigns/{campaign_id}/leads",
     response_model=CampaignLeadResponse,
     status_code=201,
-    summary="Add a lead to a campaign",
+    summary="Add a lead to a Campania",
 )
 def add_campaign_lead(campaign_id: uuid.UUID, body: CampaignLeadAdd, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
-    lead = db.query(Lead).filter(Lead.id == body.lead_id, Lead.cuenta_id == campaign.cuenta_id).first()
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
+    lead = db.query(Lead).filter(Lead.id == body.lead_id, Lead.cuenta_id == Campania.cuenta_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found in this account")
     existing = db.query(CampaignLead).filter(
         CampaignLead.campaign_id == campaign_id, CampaignLead.lead_id == body.lead_id
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Lead already in this campaign")
+        raise HTTPException(status_code=400, detail="Lead already in this Campania")
     # Check DNC
     is_dnc = db.query(DncEntry).filter(
-        DncEntry.cuenta_id == campaign.cuenta_id, DncEntry.telefono == body.telefono
+        DncEntry.cuenta_id == Campania.cuenta_id, DncEntry.telefono == body.telefono
     ).first()
     cl = CampaignLead(
         campaign_id=campaign_id,
@@ -602,12 +603,12 @@ def add_campaign_lead(campaign_id: uuid.UUID, body: CampaignLeadAdd, db: Session
     summary="Bulk add leads from a lead base or lote",
 )
 def bulk_add_campaign_leads(campaign_id: uuid.UUID, body: CampaignLeadBulkAdd, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
 
     # Get leads from source
-    query = db.query(Lead).filter(Lead.cuenta_id == campaign.cuenta_id)
+    query = db.query(Lead).filter(Lead.cuenta_id == Campania.cuenta_id)
     if body.source_type == "lead_base":
         query = query.filter(Lead.lead_base_id == body.source_id)
     elif body.source_type == "lote":
@@ -619,7 +620,7 @@ def bulk_add_campaign_leads(campaign_id: uuid.UUID, body: CampaignLeadBulkAdd, d
     if not leads:
         raise HTTPException(status_code=404, detail="No leads found in the specified source")
 
-    # Load existing campaign leads to avoid duplicates
+    # Load existing Campania leads to avoid duplicates
     existing_lead_ids = set(
         row[0] for row in
         db.query(CampaignLead.lead_id).filter(CampaignLead.campaign_id == campaign_id).all()
@@ -628,7 +629,7 @@ def bulk_add_campaign_leads(campaign_id: uuid.UUID, body: CampaignLeadBulkAdd, d
     # Load DNC numbers
     dnc_numbers = set(
         row[0] for row in
-        db.query(DncEntry.telefono).filter(DncEntry.cuenta_id == campaign.cuenta_id).all()
+        db.query(DncEntry.telefono).filter(DncEntry.cuenta_id == Campania.cuenta_id).all()
     )
 
     added = 0
@@ -672,7 +673,7 @@ def bulk_add_campaign_leads(campaign_id: uuid.UUID, body: CampaignLeadBulkAdd, d
 @router.get(
     "/campaigns/{campaign_id}/leads",
     response_model=CampaignLeadListResponse,
-    summary="List campaign leads",
+    summary="List Campania leads",
 )
 def list_campaign_leads(
     campaign_id: uuid.UUID,
@@ -681,9 +682,9 @@ def list_campaign_leads(
     page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
     query = db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign_id)
     if estado:
         query = query.filter(CampaignLead.estado == estado)
@@ -693,9 +694,9 @@ def list_campaign_leads(
 
 
 @router.post(
-    "/campaign-leads/{cl_id}/disposition",
+    "/Campania-leads/{cl_id}/disposition",
     response_model=CampaignLeadResponse,
-    summary="Set disposition on a campaign lead",
+    summary="Set disposition on a Campania lead",
 )
 def set_campaign_lead_disposition(
     cl_id: uuid.UUID,
@@ -704,7 +705,7 @@ def set_campaign_lead_disposition(
 ):
     cl = db.query(CampaignLead).filter(CampaignLead.id == cl_id).first()
     if not cl:
-        raise HTTPException(status_code=404, detail="Campaign lead not found")
+        raise HTTPException(status_code=404, detail="Campania lead not found")
     disposition = db.query(Disposition).filter(Disposition.id == body.disposition_id).first()
     if not disposition:
         raise HTTPException(status_code=404, detail="Disposition not found")
@@ -742,17 +743,17 @@ def set_campaign_lead_disposition(
     return cl
 
 
-# ─── Campaign Stats ──────────────────────────────────────────────────────────
+# â”€â”€â”€ Campania Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get(
     "/campaigns/{campaign_id}/stats",
     response_model=CampaignStatsResponse,
-    summary="Get campaign statistics",
+    summary="Get Campania statistics",
 )
 def get_campaign_stats(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
 
     def _count_estado(estado: str) -> int:
         return db.query(func.count(CampaignLead.id)).filter(
@@ -793,7 +794,7 @@ def get_campaign_stats(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
 
     return CampaignStatsResponse(
         campaign_id=campaign_id,
-        estado=campaign.estado,
+        estado=Campania.estado,
         total_leads=total,
         leads_pending=pending,
         leads_contacted=contacted,
@@ -809,9 +810,9 @@ def get_campaign_stats(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Dialer / Call Control
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post(
     "/campaigns/{campaign_id}/manual-call",
@@ -819,13 +820,13 @@ def get_campaign_stats(campaign_id: uuid.UUID, db: Session = Depends(get_db)):
     summary="Manual click-to-call",
 )
 def make_manual_call(campaign_id: uuid.UUID, body: ManualCallRequest, db: Session = Depends(get_db)):
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not campaign:
-        raise HTTPException(status_code=404, detail="Campaign not found")
+    Campania = db.query(Campania).filter(Campania.id == campaign_id).first()
+    if not Campania:
+        raise HTTPException(status_code=404, detail="Campania not found")
 
     result = manual_call(
         db,
-        cuenta_id=campaign.cuenta_id,
+        cuenta_id=Campania.cuenta_id,
         agent_id=body.agent_id,
         campaign_lead_id=body.campaign_lead_id,
     )
@@ -838,9 +839,9 @@ def make_manual_call(campaign_id: uuid.UUID, body: ManualCallRequest, db: Sessio
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Call Records (CDR)
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.get(
     "/accounts/{account_id}/call-records",
@@ -888,9 +889,9 @@ def get_call_events(record_id: uuid.UUID, db: Session = Depends(get_db)):
     return {"items": [CallEventResponse.model_validate(e) for e in events], "total": len(events)}
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # DNC (Do Not Call)
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @router.post(
     "/accounts/{account_id}/dnc",

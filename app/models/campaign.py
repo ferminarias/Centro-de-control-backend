@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Boolean, Text, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Boolean, Text, Time, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,8 +31,8 @@ class EstadoCampania(str, Enum):
 
 class Campania(Base):
     """
-    Campaña de contact center
-    Define configuración, discador, bases asignadas, etc.
+    Campaña de contact center (consolidada VoIP + Contact Center)
+    Define configuración, discador, bases asignadas, troncales SIP, etc.
     """
     __tablename__ = "campanias"
 
@@ -51,9 +51,10 @@ class Campania(Base):
         String(20), default=EstadoCampania.BORRADOR
     )
     
-    # Tipo de discador
+    # Tipo de discador (unificado)
     tipo_discador: Mapped[str] = mapped_column(
-        String(20), default=TipoDiscador.SIN_DISCADOR
+        String(20), default=TipoDiscador.SIN_DISCADOR,
+        comment="sin_discador/manual, preview, progresivo, predictivo"
     )
     
     # Configuración del discador (JSON flexible)
@@ -61,6 +62,55 @@ class Campania(Base):
         JSONB, default=dict,
         comment="Config específica: timeout, demora_llamada, canales_max, etc."
     )
+    
+    # ─────────────────────────────────────────────────────────────────
+    # Campos VoIP (migrados desde campaigns)
+    # ─────────────────────────────────────────────────────────────────
+    trunk_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sip_trunks.id", ondelete="SET NULL"),
+        nullable=True, index=True
+    )
+    pbx_node_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("pbx_nodes.id", ondelete="SET NULL"),
+        nullable=True, index=True
+    )
+    caller_id: Mapped[str | None] = mapped_column(
+        String(50), nullable=True,
+        comment="Override del CallerID para esta campaña"
+    )
+    
+    # Límites y timeouts
+    max_concurrent_calls: Mapped[int] = mapped_column(
+        Integer, default=5,
+        comment="Máximo de llamadas concurrentes"
+    )
+    max_retries: Mapped[int] = mapped_column(
+        Integer, default=3,
+        comment="Máximo de intentos por lead"
+    )
+    retry_delay_minutes: Mapped[int] = mapped_column(
+        Integer, default=60,
+        comment="Minutos entre reintentos"
+    )
+    ring_timeout: Mapped[int] = mapped_column(
+        Integer, default=30,
+        comment="Segundos de ring antes de colgar"
+    )
+    abandon_timeout: Mapped[int] = mapped_column(
+        Integer, default=5,
+        comment="Segundos antes de considerar llamada abandonada"
+    )
+    
+    # Predictive params
+    predictive_ratio: Mapped[float] = mapped_column(
+        Float, default=1.2,
+        comment="Ratio llamadas/agente disponible (modo predictivo)"
+    )
+    
+    # Métricas cacheadas
+    total_leads: Mapped[int] = mapped_column(Integer, default=0)
+    leads_contacted: Mapped[int] = mapped_column(Integer, default=0)
+    leads_pending: Mapped[int] = mapped_column(Integer, default=0)
     
     # Configuración de la campaña
     permite_llamada_manual: Mapped[bool] = mapped_column(
@@ -101,7 +151,7 @@ class Campania(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
     )
     
-    # Relationships
+    # Relationships - Contact Center
     account: Mapped["Account"] = relationship(back_populates="campanias")  # noqa: F821
     bases: Mapped[list["CampaniaBase"]] = relationship(
         back_populates="campania", cascade="all, delete-orphan"
@@ -110,6 +160,16 @@ class Campania(Base):
         back_populates="campania", cascade="all, delete-orphan"
     )
     cola: Mapped[list["ColaLead"]] = relationship(
+        back_populates="campania", cascade="all, delete-orphan"
+    )
+    
+    # Relationships - VoIP
+    trunk: Mapped["SipTrunk | None"] = relationship()  # noqa: F821
+    pbx_node: Mapped["PbxNode | None"] = relationship()  # noqa: F821
+    campaign_leads: Mapped[list["CampaignLead"]] = relationship(
+        back_populates="campania", cascade="all, delete-orphan"
+    )
+    campaign_agents: Mapped[list["CampaignAgent"]] = relationship(
         back_populates="campania", cascade="all, delete-orphan"
     )
 

@@ -5,12 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.rate_limiter import rate_limit
 from app.models.account import Account
 from app.models.field import CustomField
 from app.models.lead import Lead
 from app.models.record import Record
 from app.schemas.ingest import IngestResponse
-from app.services.automation_engine import run_automations
+from app.tasks.automations import run_automations_for_event
 from app.services.field_auto_creator import auto_create_fields, detect_unknown_fields
 from app.services.lead_id_generator import next_id_lead
 from app.services.routing_engine import evaluate_routing
@@ -27,6 +28,7 @@ router = APIRouter()
     summary="Ingest webhook data",
     description="Receive CRM data for a specific account identified by its API key.",
 )
+@rate_limit(100, "1/minute")  # 100 requests per minute per IP
 def ingest_webhook(
     account_api_key: str,
     payload: dict[str, Any],
@@ -118,11 +120,16 @@ def ingest_webhook(
     except Exception as e:
         logger.error("Webhook dispatch failed for account %s: %s", account.id, e)
 
-    # Fire automations (best-effort, independent of webhooks)
+    # Fire automations asynchronously (non-blocking)
     try:
-        run_automations(db, account.id, "lead_created", lead=lead)
+        run_automations_for_event.delay(
+            str(account.id),
+            "lead_created",
+            str(lead.id),
+            context={"record_id": str(record.id)}
+        )
     except Exception as e:
-        logger.error("Automations failed for account %s: %s", account.id, e)
+        logger.error("Failed to queue automations for account %s: %s", account.id, e)
 
     return IngestResponse(
         success=True,

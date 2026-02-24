@@ -7,8 +7,12 @@ class Settings(BaseSettings):
     ADMIN_API_KEY: str = ""
     SECRET_KEY: str = "change-me-to-a-random-secret-key"
     ENVIRONMENT: str = "development"
-    AUTH_ENABLED: bool = False
     PORT: int = 8000
+
+    # Security settings
+    # Comma-separated list of allowed origins for CORS
+    # Example: "https://app.tudominio.com,https://admin.tudominio.com"
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
 
     # Campos excluidos de la auto-creación
     EXCLUDED_FIELDS: list[str] = ["IDLOTE", "USUARIO_PREASIGNADO"]

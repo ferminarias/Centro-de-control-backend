@@ -1,4 +1,4 @@
-"""
+﻿"""
 Asterisk Manager Interface (AMI) connection manager.
 
 Provides methods to:
@@ -20,8 +20,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.models.campaign import Campania
 from app.models.voip import (
-    Agent, AgentStatus, CallEvent, CallRecord, Campaign, CampaignLead,
+    Agent, AgentStatus, CallEvent, CallRecord, CampaignLead,
     CampaignLeadStatus, PbxNode, SipTrunk,
 )
 
@@ -55,7 +56,7 @@ class AMIManager:
         cuenta_id: uuid.UUID,
         agent: Agent,
         destino: str,
-        campaign: Campaign | None = None,
+        Campania: Campania | None = None,
         campaign_lead: CampaignLead | None = None,
         trunk: SipTrunk | None = None,
         caller_id: str | None = None,
@@ -76,8 +77,8 @@ class AMIManager:
         node = None
         if agent.pbx_node_id:
             node = db.query(PbxNode).filter(PbxNode.id == agent.pbx_node_id).first()
-        if not node and campaign and campaign.pbx_node_id:
-            node = db.query(PbxNode).filter(PbxNode.id == campaign.pbx_node_id).first()
+        if not node and Campania and Campania.pbx_node_id:
+            node = db.query(PbxNode).filter(PbxNode.id == Campania.pbx_node_id).first()
         if not node:
             node = (
                 db.query(PbxNode)
@@ -89,8 +90,8 @@ class AMIManager:
             return OriginateResult(success=False, message="No active PBX node found")
 
         # Resolve trunk
-        if not trunk and campaign and campaign.trunk_id:
-            trunk = db.query(SipTrunk).filter(SipTrunk.id == campaign.trunk_id).first()
+        if not trunk and Campania and Campania.trunk_id:
+            trunk = db.query(SipTrunk).filter(SipTrunk.id == Campania.trunk_id).first()
 
         # Build dial string
         dial_number = destino
@@ -100,20 +101,20 @@ class AMIManager:
             if trunk.prefix:
                 dial_number = trunk.prefix + dial_number
             channel = f"PJSIP/{dial_number}@{trunk.nombre}"
-            effective_caller_id = caller_id or (campaign.caller_id if campaign else None) or trunk.caller_id or destino
+            effective_caller_id = caller_id or (Campania.caller_id if Campania else None) or trunk.caller_id or destino
         else:
-            # No trunk configured — use default outbound context
+            # No trunk configured â€” use default outbound context
             channel = f"PJSIP/{dial_number}@outbound"
             effective_caller_id = caller_id or destino
 
         ring_timeout = 30
-        if campaign:
-            ring_timeout = campaign.ring_timeout
+        if Campania:
+            ring_timeout = Campania.ring_timeout
 
         # Create CallRecord
         call_record = CallRecord(
             cuenta_id=cuenta_id,
-            campaign_id=campaign.id if campaign else None,
+            campaign_id=Campania.id if Campania else None,
             campaign_lead_id=campaign_lead.id if campaign_lead else None,
             agent_id=agent.id,
             trunk_id=trunk.id if trunk else None,
@@ -144,7 +145,7 @@ class AMIManager:
         agent.estado = AgentStatus.RINGING.value
         agent.current_call_id = call_record.id
 
-        # Update campaign lead if applicable
+        # Update Campania lead if applicable
         if campaign_lead:
             campaign_lead.estado = CampaignLeadStatus.DIALING.value
             campaign_lead.intentos += 1
@@ -166,7 +167,7 @@ class AMIManager:
                 variables={
                     "CDR_PROP(disable)": "1",  # We handle CDR ourselves
                     "CALL_RECORD_ID": str(call_record.id),
-                    "CAMPAIGN_ID": str(campaign.id) if campaign else "",
+                    "CAMPAIGN_ID": str(Campania.id) if Campania else "",
                     "AGENT_ID": str(agent.id),
                 },
                 application="Dial",

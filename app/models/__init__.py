@@ -18,17 +18,19 @@ from app.models.routing_rule import RoutingRule
 from app.models.tipificacion_externa import TipificacionExterna
 from app.models.user import User
 from app.models.voip import (
-    Agent, CallEvent, CallRecord, Campaign as VoipCampaign, CampaignAgent, CampaignLead,
-    Disposition, DncEntry, PbxNode, SipProvider, SipTrunk,
+    Agent, AgentStatus, CallEvent, CallRecord, CampaignAgent, CampaignLead,
+    CampaignLeadStatus, CampaignStatus, DialerMode, Disposition, DncEntry, 
+    PbxNode, SipProvider, SipTrunk,
 )
 from app.models.webhook import Webhook, WebhookLog
 
 __all__ = [
-    # Campaigns (Nuevo)
+    # Campaigns (consolidado VoIP + Contact Center)
     "Campania", "CampaniaAgente", "CampaniaBase", "ColaLead", "AgenteCampaniaLog",
     "TipoDiscador", "EstadoCampania", "EstadoCola", "EstadoAgenteEnCampania",
+    "CampaignAgent", "CampaignLead", "CampaignStatus", "CampaignLeadStatus", "DialerMode",
     # VoIP
-    "Agent", "CallEvent", "CallRecord", "VoipCampaign", "CampaignAgent", "CampaignLead",
+    "Agent", "AgentStatus", "CallEvent", "CallRecord",
     "Disposition", "DncEntry", "PbxNode", "SipProvider", "SipTrunk",
     # Core
     "Account", "Actividad", "Agent", "AuditLog", "Automation", "AutomationAction", "AutomationCondition", "AutomationLog",

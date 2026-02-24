@@ -211,48 +211,6 @@ class Disposition(Base):
 # Campaign
 # ═══════════════════════════════════════════════════════════════════════════
 
-class Campaign(Base):
-    __tablename__ = "campaigns"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    cuenta_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
-    trunk_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("sip_trunks.id", ondelete="SET NULL"), nullable=True)
-    pbx_node_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("pbx_nodes.id", ondelete="SET NULL"), nullable=True)
-    nombre: Mapped[str] = mapped_column(String(255), nullable=False)
-    descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Dialer
-    dialer_mode: Mapped[str] = mapped_column(String(20), default=DialerMode.MANUAL.value)
-    caller_id: Mapped[str | None] = mapped_column(String(50), nullable=True, comment="Override trunk callerID")
-    # Status
-    estado: Mapped[str] = mapped_column(String(20), default=CampaignStatus.DRAFT.value, index=True)
-    # Schedule
-    hora_inicio: Mapped[time | None] = mapped_column(Time, nullable=True, comment="Daily start time")
-    hora_fin: Mapped[time | None] = mapped_column(Time, nullable=True, comment="Daily end time")
-    timezone: Mapped[str] = mapped_column(String(50), default="America/Argentina/Buenos_Aires")
-    dias_semana: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=lambda: [1, 2, 3, 4, 5], comment="1=Mon..7=Sun")
-    # Limits
-    max_concurrent_calls: Mapped[int] = mapped_column(Integer, default=5)
-    max_retries: Mapped[int] = mapped_column(Integer, default=3, comment="Max dial attempts per lead")
-    retry_delay_minutes: Mapped[int] = mapped_column(Integer, default=60, comment="Min minutes between retries")
-    ring_timeout: Mapped[int] = mapped_column(Integer, default=30, comment="Seconds to ring before giving up")
-    abandon_timeout: Mapped[int] = mapped_column(Integer, default=5, comment="Seconds before connected call with no agent = abandoned")
-    # Predictive params
-    predictive_ratio: Mapped[float] = mapped_column(Float, default=1.2, comment="Calls per available agent (predictive mode)")
-    # Metrics (cached)
-    total_leads: Mapped[int] = mapped_column(Integer, default=0)
-    leads_contacted: Mapped[int] = mapped_column(Integer, default=0)
-    leads_pending: Mapped[int] = mapped_column(Integer, default=0)
-    #
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-    account: Mapped["Account"] = relationship()  # noqa: F821
-    trunk: Mapped["SipTrunk | None"] = relationship()
-    pbx_node: Mapped["PbxNode | None"] = relationship()
-    campaign_leads: Mapped[list["CampaignLead"]] = relationship(back_populates="campaign", cascade="all, delete-orphan")
-    campaign_agents: Mapped[list["CampaignAgent"]] = relationship(back_populates="campaign", cascade="all, delete-orphan")
-
-
 # ═══════════════════════════════════════════════════════════════════════════
 # CampaignAgent (M2M: agents assigned to campaign)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -264,12 +222,12 @@ class CampaignAgent(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), index=True)
+    campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("campanias.id", ondelete="CASCADE"), index=True)
     agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id", ondelete="CASCADE"), index=True)
     prioridad: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    campaign: Mapped["Campaign"] = relationship(back_populates="campaign_agents")
+    campania: Mapped["Campania"] = relationship(back_populates="campaign_agents")  # noqa: F821
     agent: Mapped["Agent"] = relationship()
 
 
@@ -284,7 +242,7 @@ class CampaignLead(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), index=True)
+    campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("campanias.id", ondelete="CASCADE"), index=True)
     lead_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("leads.id", ondelete="CASCADE"), index=True)
     telefono: Mapped[str] = mapped_column(String(50), nullable=False, comment="Phone to dial")
     # Dial state
@@ -302,7 +260,7 @@ class CampaignLead(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    campaign: Mapped["Campaign"] = relationship(back_populates="campaign_leads")
+    campania: Mapped["Campania"] = relationship(back_populates="campaign_leads")  # noqa: F821
     lead: Mapped["Lead"] = relationship()  # noqa: F821
     disposition: Mapped["Disposition | None"] = relationship()
     assigned_agent: Mapped["Agent | None"] = relationship()
@@ -317,7 +275,7 @@ class CallRecord(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     cuenta_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
-    campaign_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="SET NULL"), nullable=True, index=True)
+    campaign_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("campanias.id", ondelete="SET NULL"), nullable=True, index=True)
     campaign_lead_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("campaign_leads.id", ondelete="SET NULL"), nullable=True)
     agent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id", ondelete="SET NULL"), nullable=True, index=True)
     trunk_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("sip_trunks.id", ondelete="SET NULL"), nullable=True)

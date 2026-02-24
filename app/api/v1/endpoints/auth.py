@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import create_access_token, get_current_user, verify_password
 from app.core.database import get_db
+from app.core.rate_limiter import rate_limit
 from app.models.role import Role
 from app.models.user import User
 from app.schemas.user import LoginRequest, LoginResponse, UserResponse
@@ -18,6 +19,7 @@ router = APIRouter()
     response_model=LoginResponse,
     summary="Login and obtain JWT token",
 )
+@rate_limit(5, "1/minute")  # 5 attempts per minute
 def login(
     body: LoginRequest,
     db: Session = Depends(get_db),
