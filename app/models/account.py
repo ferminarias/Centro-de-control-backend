@@ -101,3 +101,6 @@ class Account(Base):
     ficha_configs: Mapped[list["FichaConfig"]] = relationship(  # noqa: F821
         back_populates="account", cascade="all, delete-orphan"
     )
+    tipificaciones_externas: Mapped[list["TipificacionExterna"]] = relationship(  # noqa: F821
+        back_populates="account", cascade="all, delete-orphan"
+    )

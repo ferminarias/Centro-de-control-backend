@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
-    accounts, auth, automations, campanias, crm_extras, ficha_config, fields, ingest, lead_bases, leads, lotes,
-    records, reportes, roles, tipificaciones, ui_modules, users, voip, webhooks,
+    accounts, auth, automations, campanias, centro_control, crm_extras, ficha_config, fields, ingest, lead_bases,
+    leads, lotes, records, reportes, roles, tipificaciones, ui_modules, users, voip, webhooks,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -29,3 +29,7 @@ api_router.include_router(crm_extras.router, prefix="/admin", tags=["CRM Extras"
 api_router.include_router(campanias.router, prefix="/admin", tags=["Campañas"])
 api_router.include_router(reportes.router, prefix="/admin", tags=["Reportes"])
 api_router.include_router(ficha_config.router, prefix="/admin", tags=["Admin - Ficha Config"])
+
+# Centro de Control — Tipificaciones Externas
+api_router.include_router(centro_control.public_router, tags=["Centro de Control - Webhook"])
+api_router.include_router(centro_control.admin_router, prefix="/admin", tags=["Centro de Control"])
