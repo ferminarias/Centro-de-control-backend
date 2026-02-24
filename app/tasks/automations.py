@@ -11,7 +11,7 @@ from app.core.celery import celery_app
 from app.core.database import SessionLocal
 from app.models.automation import Automation, AutomationLog
 from app.models.lead import Lead
-from app.services.automation_engine import evaluate_condition, execute_action
+from app.services.automation_engine import _evaluate_conditions, _execute_action
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +65,9 @@ def run_automation_task(
         db.commit()
         
         # Evaluate conditions
-        conditions_met = True
-        for condition in automation.conditions:
-            if not evaluate_condition(condition, lead):
-                conditions_met = False
-                break
-        
+        lead_datos = lead.datos if lead and hasattr(lead, "datos") else {}
+        conditions_met = _evaluate_conditions(list(automation.conditions), lead_datos)
+
         if not conditions_met:
             log.status = "conditions_not_met"
             log.completed_at = datetime.now(timezone.utc)
@@ -79,9 +76,9 @@ def run_automation_task(
         
         # Execute actions
         results = []
-        for action in automation.actions:
+        for action in sorted(automation.actions, key=lambda a: a.orden):
             try:
-                result = execute_action(action, lead, context or {})
+                result = _execute_action(db, action, lead, context or {})
                 results.append({"action": action.tipo, "status": "success", "result": result})
             except Exception as e:
                 results.append({"action": action.tipo, "status": "failed", "error": str(e)})
