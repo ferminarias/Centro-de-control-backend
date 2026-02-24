@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.router import api_router
 from app.core.audit_middleware import AuditMiddleware
@@ -277,10 +278,7 @@ app.add_middleware(
 app.add_middleware(MetricsMiddleware)
 
 # Middleware de rate limiting
-app.add_middleware(
-    limiter.middleware_class,
-    key_func=lambda request: request.client.host if request.client else "unknown"
-)
+app.add_middleware(SlowAPIMiddleware)
 
 # Middleware de auditoría automática
 app.add_middleware(AuditMiddleware)
