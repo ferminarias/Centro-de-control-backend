@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: Centro de Control
+    folder: CRM
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

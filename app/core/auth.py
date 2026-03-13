@@ -83,7 +83,11 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    """Extracts and validates the JWT, returns the User object."""
+    """Extracts and validates the JWT, returns the User object.
+
+    Attaches ``user._permisos`` (list[str]) from the JWT claims so callers
+    can check permissions without an extra DB round-trip.
+    """
     if not credentials:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
@@ -91,6 +95,9 @@ def get_current_user(
     user = db.query(User).filter(User.id == data["sub"], User.activo.is_(True)).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+
+    # Attach permissions from JWT — avoids a Role DB query in permission checks
+    user._permisos = data.get("permisos", [])
     return user
 
 

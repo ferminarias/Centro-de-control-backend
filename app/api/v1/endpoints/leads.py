@@ -10,6 +10,8 @@ from openpyxl import Workbook, load_workbook
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.pagination import apply_cursor_filter, build_next_cursor, decode_cursor
+
 from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.core.multi_tenant import verify_tenant_access, TenantContext, get_tenant_context
@@ -51,6 +53,14 @@ def list_leads(
     account_id: uuid.UUID,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    # Cursor pagination (preferred for large datasets)
+    cursor: str | None = Query(
+        None,
+        description=(
+            "Opaque cursor for efficient pagination (returned as next_cursor). "
+            "When provided, the 'page' param is ignored."
+        ),
+    ),
     # Search
     search: str | None = Query(None, description="Full-text search on nombre, email, telefono"),
     # Filters
@@ -63,7 +73,7 @@ def list_leads(
     score_max: int | None = Query(None, ge=0, le=100),
     created_after: datetime | None = Query(None),
     created_before: datetime | None = Query(None),
-    # Sorting
+    # Sorting (only used in offset mode; cursor mode always uses DESC created_at, id)
     order_by: str = Query("created_at", description="created_at, score, id_lead"),
     order_dir: str = Query("desc", description="asc or desc"),
     db: Session = Depends(get_db),
@@ -72,16 +82,16 @@ def list_leads(
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    query = (
+    base_query = (
         db.query(Lead)
         .options(joinedload(Lead.lead_base), joinedload(Lead.lote))
         .filter(Lead.cuenta_id == account_id)
     )
 
-    # Full-text search across JSONB fields
+    # ── Shared filters ────────────────────────────────────────────────────────
     if search:
         term = f"%{search.strip()}%"
-        query = query.filter(
+        base_query = base_query.filter(
             or_(
                 Lead.datos["nombre"].astext.ilike(term),
                 Lead.datos["email"].astext.ilike(term),
@@ -90,36 +100,56 @@ def list_leads(
                 Lead.datos["apellido"].astext.ilike(term),
             )
         )
-
     if lead_base_id:
-        query = query.filter(Lead.lead_base_id == lead_base_id)
+        base_query = base_query.filter(Lead.lead_base_id == lead_base_id)
     if lote_id:
-        query = query.filter(Lead.lote_id == lote_id)
+        base_query = base_query.filter(Lead.lote_id == lote_id)
     if assigned_to:
-        query = query.filter(Lead.assigned_to == assigned_to)
+        base_query = base_query.filter(Lead.assigned_to == assigned_to)
     if tipificacion_id:
-        query = query.filter(Lead.tipificacion_id == tipificacion_id)
+        base_query = base_query.filter(Lead.tipificacion_id == tipificacion_id)
     if temperatura:
-        query = query.filter(Lead.temperatura == temperatura)
+        base_query = base_query.filter(Lead.temperatura == temperatura)
     if score_min is not None:
-        query = query.filter(Lead.score >= score_min)
+        base_query = base_query.filter(Lead.score >= score_min)
     if score_max is not None:
-        query = query.filter(Lead.score <= score_max)
+        base_query = base_query.filter(Lead.score <= score_max)
     if created_after:
-        query = query.filter(Lead.created_at >= created_after)
+        base_query = base_query.filter(Lead.created_at >= created_after)
     if created_before:
-        query = query.filter(Lead.created_at <= created_before)
+        base_query = base_query.filter(Lead.created_at <= created_before)
 
-    # Sorting
-    sort_col = {
-        "created_at": Lead.created_at,
-        "score": Lead.score,
-        "id_lead": Lead.id_lead,
-    }.get(order_by, Lead.created_at)
-    query = query.order_by(sort_col.desc() if order_dir == "desc" else sort_col.asc())
+    # ── Cursor mode (O(1) per page, scales to 10M+ rows) ─────────────────────
+    cursor_value = decode_cursor(cursor)
+    if cursor_value is not None or cursor is not None:
+        # Cursor mode: always ORDER BY created_at DESC, id DESC
+        paged_query = (
+            apply_cursor_filter(base_query, cursor_value, Lead)
+            .order_by(Lead.created_at.desc(), Lead.id.desc())
+            .limit(page_size + 1)  # fetch one extra to detect next page
+        )
+        raw_leads = paged_query.all()
+        next_cursor, leads = build_next_cursor(raw_leads, page_size)
+        total = -1  # not computed in cursor mode (avoid O(N) COUNT)
+    else:
+        # ── Offset mode (backward-compatible) ────────────────────────────────
+        sort_col = {
+            "created_at": Lead.created_at,
+            "score": Lead.score,
+            "id_lead": Lead.id_lead,
+        }.get(order_by, Lead.created_at)
+        paged_query = base_query.order_by(
+            sort_col.desc() if order_dir == "desc" else sort_col.asc()
+        )
+        total = paged_query.count()
+        leads = paged_query.offset((page - 1) * page_size).limit(page_size).all()
 
-    total = query.count()
-    leads = query.offset((page - 1) * page_size).limit(page_size).all()
+        # Still provide cursor for the client to switch to cursor mode next call
+        next_cursor = None
+        if leads and len(leads) == page_size:
+            from app.core.pagination import encode_cursor
+            last = leads[-1]
+            next_cursor = encode_cursor(last.created_at, last.id)
 
     items = [
         _lead_to_dict(
@@ -130,7 +160,13 @@ def list_leads(
         for lead in leads
     ]
 
-    return {"items": items, "total": total, "page": page, "page_size": page_size}
+    return {
+        "items": items,
+        "total": total,
+        "page": page if cursor_value is None and cursor is None else -1,
+        "page_size": page_size,
+        "next_cursor": next_cursor,
+    }
 
 
 @router.get(
@@ -256,7 +292,29 @@ def bulk_update_leads(
     errors: list[str] = []
     leads_to_sync: list[tuple] = []
 
-    for row_idx, row in enumerate(rows[1:], start=2):
+    # Collect all id_lead values from the spreadsheet first (one pass)
+    data_rows = rows[1:]
+    requested_ids: list[int] = []
+    for row_idx, row in enumerate(data_rows, start=2):
+        raw_id = row[0] if row else None
+        if raw_id is None or str(raw_id).strip() == "":
+            continue
+        try:
+            requested_ids.append(int(raw_id))
+        except (ValueError, TypeError):
+            errors.append(f"Row {row_idx}: invalid id_lead '{raw_id}'")
+
+    # Single query to fetch all needed leads (eliminates N+1)
+    lead_map: dict[int, Lead] = {}
+    if requested_ids:
+        fetched = (
+            db.query(Lead)
+            .filter(Lead.cuenta_id == account_id, Lead.id_lead.in_(requested_ids))
+            .all()
+        )
+        lead_map = {lead.id_lead: lead for lead in fetched}
+
+    for row_idx, row in enumerate(data_rows, start=2):
         raw_id = row[0] if row else None
         if raw_id is None or str(raw_id).strip() == "":
             continue
@@ -264,13 +322,9 @@ def bulk_update_leads(
         try:
             lead_id_val = int(raw_id)
         except (ValueError, TypeError):
-            errors.append(f"Row {row_idx}: invalid id_lead '{raw_id}'")
-            continue
+            continue  # already recorded in errors above
 
-        lead = db.query(Lead).filter(
-            Lead.cuenta_id == account_id,
-            Lead.id_lead == lead_id_val,
-        ).first()
+        lead = lead_map.get(lead_id_val)
 
         if not lead:
             not_found_ids.append(lead_id_val)

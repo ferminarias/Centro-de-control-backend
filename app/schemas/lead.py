@@ -25,6 +25,8 @@ class LeadListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+    # Cursor pagination — None when using offset mode or on the last page
+    next_cursor: str | None = None
 
 
 class BulkUpdateResponse(BaseModel):

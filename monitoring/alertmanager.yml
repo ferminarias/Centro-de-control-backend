@@ -1,0 +1,56 @@
+global:
+  resolve_timeout: 5m
+  # Configure your SMTP or Slack here
+  # smtp_smarthost: 'smtp.example.com:587'
+  # smtp_from: 'alerts@tudominio.com'
+  # slack_api_url: 'https://hooks.slack.com/services/...'
+
+route:
+  receiver: default
+  group_by: [alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # Critical alerts page immediately
+    - matchers:
+        - severity="critical"
+      receiver: oncall
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Business metrics go to a separate channel
+    - matchers:
+        - alertname=~"Webhook.*|Automation.*|LeadIngestion.*"
+      receiver: business
+      repeat_interval: 6h
+
+receivers:
+  - name: default
+    # Fallback — replace with real config
+    # webhook_configs:
+    #   - url: 'http://yourwebhook.example.com/alert'
+
+  - name: oncall
+    # PagerDuty / OpsGenie / webhook
+    # pagerduty_configs:
+    #   - routing_key: 'YOUR_PAGERDUTY_ROUTING_KEY'
+    # slack_configs:
+    #   - channel: '#oncall-crm'
+    #     title: '[CRITICAL] {{ .GroupLabels.alertname }}'
+    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+  - name: business
+    # slack_configs:
+    #   - channel: '#crm-alerts'
+    #     title: '[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+inhibit_rules:
+  # Inhibit warning alerts when there's already a critical for the same endpoint
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: [alertname]

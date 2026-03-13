@@ -1,0 +1,121 @@
+groups:
+  # ───────────────────────────────────────────────────────────────────────────
+  # API Health
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: api_health
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          rate(http_requests_total{status_code=~"5.."}[5m]) /
+          rate(http_requests_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate >1% on {{ $labels.endpoint }}"
+          description: >
+            {{ $value | humanizePercentage }} of requests are returning 5xx.
+            Endpoint: {{ $labels.endpoint }}.
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p95 latency >500ms on {{ $labels.endpoint }}"
+          description: >
+            p95 latency is {{ $value | humanizeDuration }}.
+            Endpoint: {{ $labels.endpoint }}, method: {{ $labels.method }}.
+
+      - alert: VeryHighLatencyP95
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2.0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API p95 latency >2s on {{ $labels.endpoint }}"
+          description: >
+            p95 latency is {{ $value | humanizeDuration }}.
+            The service may be overloaded or hitting slow queries.
+
+      - alert: APIDown
+        expr: up{job="centro-control"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Centro de Control API is down"
+          description: "The application has been unreachable for more than 1 minute."
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Business Metrics
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: business_metrics
+    rules:
+      - alert: WebhookFailureRateHigh
+        expr: |
+          rate(webhook_dispatches_total{status="failed"}[10m]) /
+          rate(webhook_dispatches_total[10m]) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Webhook failure rate >10%"
+          description: >
+            {{ $value | humanizePercentage }} of webhook dispatches are failing.
+            Check connectivity to downstream systems.
+
+      - alert: AutomationFailureRateHigh
+        expr: |
+          rate(automation_executions_total{status="failed"}[15m]) /
+          rate(automation_executions_total[15m]) > 0.20
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Automation failure rate >20%"
+          description: >
+            {{ $value | humanizePercentage }} of automation executions are failing.
+
+      - alert: LeadIngestionStopped
+        expr: |
+          rate(leads_ingested_total[30m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No leads ingested in 30 minutes"
+          description: >
+            The ingestion endpoint has received no leads in the past 30 minutes.
+            This may be expected outside business hours.
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Infrastructure
+  # ───────────────────────────────────────────────────────────────────────────
+  - name: infrastructure
+    rules:
+      - alert: HighRequestVolume
+        expr: rate(http_requests_total[1m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusually high request volume (>1000 req/s)"
+          description: >
+            Current rate: {{ $value | humanize }} req/s.
+            Possible traffic spike or DDoS attempt.
+
+      - alert: LargeRequestSizeP95
+        expr: |
+          histogram_quantile(0.95, rate(http_request_size_bytes_bucket[5m])) > 1048576
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Large request size p95 >1MB"
+          description: >
+            p95 request size is {{ $value | humanizeBytes }}.
+            Clients may be sending oversized payloads.

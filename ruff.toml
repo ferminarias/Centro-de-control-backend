@@ -1,0 +1,22 @@
+# Ruff configuration
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in default arguments (FastAPI pattern)
+    "UP007", # use X | Y instead of Optional[X] (keep Optional for clarity)
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["F401", "F811"]  # unused imports ok in test files
+"alembic/*" = ["F401"]        # alembic imports can be unused

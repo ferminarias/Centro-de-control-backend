@@ -11,8 +11,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
-from sqlalchemy import and_, desc, func
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, case, desc, func
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.auth import get_current_user, require_permission
 from app.core.audit import log_action, log_entity_change
@@ -60,13 +60,20 @@ def verify_account_access(current_user: User, account_id: uuid.UUID, db: Session
 
 
 def is_ultra_admin(current_user: User, db: Session) -> bool:
-    """Check if user is ultra admin (has accounts:* or * permission)."""
-    if current_user.role_id:
-        role = db.query(Role).filter(Role.id == current_user.role_id).first()
-        if role and role.permisos:
-            if "accounts:*" in role.permisos or "*" in role.permisos:
-                return True
-    return False
+    """Check if user is ultra admin (has accounts:* or * permission).
+
+    Uses ``user._permisos`` set by ``get_current_user`` when available,
+    falling back to a DB query only when permissions are not in the JWT.
+    """
+    permisos: list[str] = getattr(current_user, "_permisos", None)
+    if permisos is None:
+        # Fallback: load from DB (only when called outside a JWT-authenticated request)
+        if current_user.role_id:
+            role = db.query(Role).filter(Role.id == current_user.role_id).first()
+            permisos = role.permisos if role else []
+        else:
+            permisos = []
+    return "accounts:*" in permisos or "*" in permisos
 
 
 def get_next_lead_for_agent(
@@ -128,14 +135,35 @@ def list_campanias(
     """Listar campañas de una cuenta."""
     verify_account_access(current_user, account_id, db)
     
-    query = db.query(Campania).filter(Campania.cuenta_id == account_id)
-    
+    query = (
+        db.query(Campania)
+        .options(
+            selectinload(Campania.bases),
+            selectinload(Campania.agentes),
+        )
+        .filter(Campania.cuenta_id == account_id)
+    )
+
     if estado:
         query = query.filter(Campania.estado == estado)
-    
+
     campanias = query.order_by(desc(Campania.created_at)).all()
-    
-    # Agregar contadores
+
+    # Single aggregated query for pending-lead counts across all campaigns
+    campania_ids = [c.id for c in campanias]
+    cola_counts: dict[uuid.UUID, int] = {}
+    if campania_ids:
+        rows = (
+            db.query(ColaLead.campania_id, func.count(ColaLead.id))
+            .filter(
+                ColaLead.campania_id.in_(campania_ids),
+                ColaLead.estado == EstadoCola.PENDIENTE,
+            )
+            .group_by(ColaLead.campania_id)
+            .all()
+        )
+        cola_counts = {campania_id: count for campania_id, count in rows}
+
     result = []
     for c in campanias:
         camp_dict = {
@@ -157,14 +185,11 @@ def list_campanias(
             "updated_at": c.updated_at,
             "created_by": c.created_by,
             "total_bases": len(c.bases),
-            "total_agentes": len([a for a in c.agentes if a.activo]),
-            "leads_en_cola": db.query(ColaLead).filter(
-                ColaLead.campania_id == c.id,
-                ColaLead.estado == EstadoCola.PENDIENTE
-            ).count()
+            "total_agentes": sum(1 for a in c.agentes if a.activo),
+            "leads_en_cola": cola_counts.get(c.id, 0),
         }
         result.append(camp_dict)
-    
+
     return {"items": result, "total": len(result)}
 
 
