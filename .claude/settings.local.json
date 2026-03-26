@@ -35,7 +35,8 @@
       "Bash(python3 -c \"\nimport os, sys\nsys.path.insert\\(0, '.'\\)\nos.environ['DATABASE_URL'] = 'postgresql://centro:centro_pass@localhost:5432/centro_control'\nos.environ['ENVIRONMENT'] = 'development'\nfrom app.core.config import settings\nprint\\('config OK - ENVIRONMENT:', settings.ENVIRONMENT\\)\nfrom app.core.startup_checks import run_startup_checks\nprint\\('startup_checks import OK'\\)\nfrom app.core.security import verify_admin_key\nprint\\('security import OK'\\)\n\" 2>&1)",
       "Bash(source .venv/bin/activate 2>/dev/null || true && which python3 && python3 -c \"import pydantic; print\\(pydantic.__version__\\)\" 2>&1)",
       "Bash(python3 -m py_compile tests/test_config_security.py && echo \"OK\")",
-      "Bash(python3 -m py_compile app/core/auth.py && echo \"auth.py OK\" && python3 -m py_compile app/api/v1/endpoints/campanias.py && echo \"campanias.py OK\" && python3 -m py_compile app/api/v1/endpoints/leads.py && echo \"leads.py OK\")"
+      "Bash(python3 -m py_compile app/core/auth.py && echo \"auth.py OK\" && python3 -m py_compile app/api/v1/endpoints/campanias.py && echo \"campanias.py OK\" && python3 -m py_compile app/api/v1/endpoints/leads.py && echo \"leads.py OK\")",
+      "Bash(python3 -c \"import secrets; print\\('SECRET_KEY=' + secrets.token_hex\\(32\\)\\); print\\('ADMIN_API_KEY=' + secrets.token_hex\\(32\\)\\)\")"
     ]
   }
 }

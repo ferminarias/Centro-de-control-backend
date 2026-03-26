@@ -13,10 +13,18 @@ from fastapi import Request, HTTPException
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/1")
 
 # Create limiter instance
+def _storage_uri() -> str:
+    """Use Redis if available, fall back to memory."""
+    if os.getenv("ENVIRONMENT") == "development":
+        return "memory://"
+    redis_url = os.getenv("REDIS_URL", "")
+    return redis_url if redis_url else "memory://"
+
+
 limiter = Limiter(
     key_func=get_remote_address,
-    storage_uri=REDIS_URL if os.getenv("ENVIRONMENT") != "development" else "memory://",
-    strategy="moving-window",  # Better for distributed systems
+    storage_uri=_storage_uri(),
+    strategy="moving-window",
 )
 
 
