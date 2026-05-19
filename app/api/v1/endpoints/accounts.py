@@ -124,6 +124,42 @@ def delete_account(
     db.commit()
 
 
+@router.post(
+    "/accounts/{account_id}/regenerate-key",
+    response_model=AccountResponse,
+    summary="Regenerate API key",
+    dependencies=[Depends(require_permission("accounts:update"))],
+)
+def regenerate_api_key(
+    account_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Account:
+    account = _get_account_or_404(db, account_id)
+    account.api_key = _generate_api_key()
+    db.commit()
+    db.refresh(account)
+    return account
+
+
+@router.post(
+    "/accounts/{account_id}/regenerate-webhook-secret",
+    response_model=AccountResponse,
+    summary="Regenerate webhook secret",
+    dependencies=[Depends(require_permission("accounts:update"))],
+)
+def regenerate_webhook_secret(
+    account_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Account:
+    account = _get_account_or_404(db, account_id)
+    account.webhook_secret = secrets.token_hex(32)
+    db.commit()
+    db.refresh(account)
+    return account
+
+
 @router.patch(
     "/accounts/{account_id}/toggle-auto-create",
     response_model=AccountResponse,

@@ -21,6 +21,7 @@ class AccountResponse(BaseModel):
     id: uuid.UUID
     nombre: str
     api_key: str
+    webhook_secret: str
     activo: bool
     auto_crear_campos: bool
     created_at: datetime
