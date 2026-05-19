@@ -62,18 +62,15 @@ class Account(Base):
         back_populates="account", cascade="all, delete-orphan"
     )
     sip_providers: Mapped[list["SipProvider"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
+        back_populates="account", cascade="all, delete-orphan"
     )
     pbx_nodes: Mapped[list["PbxNode"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
+        back_populates="account", cascade="all, delete-orphan"
     )
     agents: Mapped[list["Agent"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
+        back_populates="account", cascade="all, delete-orphan"
     )
     dispositions: Mapped[list["Disposition"]] = relationship(  # noqa: F821
-        cascade="all, delete-orphan"
-    )
-    campaigns: Mapped[list["Campania"]] = relationship(  # noqa: F821
         back_populates="account", cascade="all, delete-orphan"
     )
     ui_modules: Mapped[list["UIModule"]] = relationship(  # noqa: F821

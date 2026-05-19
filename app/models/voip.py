@@ -92,7 +92,7 @@ class SipProvider(Base):
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    account: Mapped["Account"] = relationship()  # noqa: F821
+    account: Mapped["Account"] = relationship(back_populates="sip_providers")  # noqa: F821
     trunks: Mapped[list["SipTrunk"]] = relationship(back_populates="provider", cascade="all, delete-orphan")
 
 
@@ -150,7 +150,7 @@ class PbxNode(Base):
     health_status: Mapped[str] = mapped_column(String(20), default="unknown", comment="ok/error/unknown")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    account: Mapped["Account"] = relationship()  # noqa: F821
+    account: Mapped["Account"] = relationship(back_populates="pbx_nodes")  # noqa: F821
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -179,7 +179,7 @@ class Agent(Base):
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    account: Mapped["Account"] = relationship()  # noqa: F821
+    account: Mapped["Account"] = relationship(back_populates="agents")  # noqa: F821
     user: Mapped["User | None"] = relationship()  # noqa: F821
     pbx_node: Mapped["PbxNode | None"] = relationship()
 
@@ -204,7 +204,7 @@ class Disposition(Base):
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    account: Mapped["Account"] = relationship()  # noqa: F821
+    account: Mapped["Account"] = relationship(back_populates="dispositions")  # noqa: F821
 
 
 # ═══════════════════════════════════════════════════════════════════════════
