@@ -308,7 +308,7 @@ class CallRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
     account: Mapped["Account"] = relationship()  # noqa: F821
-    campaign: Mapped["Campaign | None"] = relationship()
+    campaign: Mapped["Campania | None"] = relationship(foreign_keys=[campaign_id])  # noqa: F821
     campaign_lead: Mapped["CampaignLead | None"] = relationship()
     agent: Mapped["Agent | None"] = relationship()
     disposition: Mapped["Disposition | None"] = relationship()
