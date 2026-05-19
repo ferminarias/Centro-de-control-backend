@@ -273,22 +273,22 @@ class CampaignResponse(BaseModel):
     pbx_node_id: uuid.UUID | None = None
     nombre: str
     descripcion: str | None = None
-    dialer_mode: str
+    tipo_discador: str | None = None
     caller_id: str | None = None
     estado: str
-    hora_inicio: time | None = None
-    hora_fin: time | None = None
-    timezone: str
-    dias_semana: list[int] | None = None
-    max_concurrent_calls: int
-    max_retries: int
-    retry_delay_minutes: int
-    ring_timeout: int
-    abandon_timeout: int
-    predictive_ratio: float
-    total_leads: int
-    leads_contacted: int
-    leads_pending: int
+    horario_inicio: str | None = None
+    horario_fin: str | None = None
+    timezone: str | None = None
+    dias_operacion: list[str] | None = None
+    max_concurrent_calls: int = 10
+    max_retries: int = 3
+    retry_delay_minutes: int = 60
+    ring_timeout: int = 30
+    abandon_timeout: int = 30
+    predictive_ratio: float = 1.0
+    total_leads: int = 0
+    leads_contacted: int = 0
+    leads_pending: int = 0
     created_at: datetime
     updated_at: datetime
 
