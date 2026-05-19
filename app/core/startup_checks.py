@@ -196,6 +196,55 @@ def _check_migration_015(conn) -> None:
 # Public entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _check_accounts_columns(conn) -> None:
+    """webhook_secret and max_custom_fields on accounts."""
+    if not _column_exists(conn, "accounts", "webhook_secret"):
+        conn.execute(text(
+            "ALTER TABLE accounts ADD COLUMN webhook_secret VARCHAR(64)"
+        ))
+        conn.execute(text(
+            "UPDATE accounts SET webhook_secret = gen_random_uuid()::text WHERE webhook_secret IS NULL"
+        ))
+        conn.execute(text(
+            "ALTER TABLE accounts ALTER COLUMN webhook_secret SET NOT NULL"
+        ))
+        conn.commit()
+        logger.warning("Startup check: added webhook_secret to accounts")
+
+    if not _column_exists(conn, "accounts", "max_custom_fields"):
+        conn.execute(text(
+            "ALTER TABLE accounts ADD COLUMN max_custom_fields INTEGER NOT NULL DEFAULT 50"
+        ))
+        conn.commit()
+        logger.warning("Startup check: added max_custom_fields to accounts")
+
+
+def _check_campanias_columns(conn) -> None:
+    """VoIP/dialer columns on campanias table."""
+    new_cols = {
+        "abandon_timeout":      "INTEGER NOT NULL DEFAULT 30",
+        "caller_id":            "VARCHAR(50)",
+        "leads_contacted":      "INTEGER NOT NULL DEFAULT 0",
+        "leads_pending":        "INTEGER NOT NULL DEFAULT 0",
+        "max_concurrent_calls": "INTEGER NOT NULL DEFAULT 10",
+        "max_retries":          "INTEGER NOT NULL DEFAULT 3",
+        "pbx_node_id":          "UUID REFERENCES pbx_nodes(id) ON DELETE SET NULL",
+        "predictive_ratio":     "FLOAT NOT NULL DEFAULT 1.0",
+        "retry_delay_minutes":  "INTEGER NOT NULL DEFAULT 60",
+        "ring_timeout":         "INTEGER NOT NULL DEFAULT 30",
+        "total_leads":          "INTEGER NOT NULL DEFAULT 0",
+        "trunk_id":             "UUID REFERENCES sip_trunks(id) ON DELETE SET NULL",
+    }
+    applied = []
+    for col, definition in new_cols.items():
+        if not _column_exists(conn, "campanias", col):
+            conn.execute(text(f"ALTER TABLE campanias ADD COLUMN {col} {definition}"))
+            applied.append(col)
+    if applied:
+        conn.commit()
+        logger.warning("Startup check: added columns to campanias: %s", applied)
+
+
 def run_startup_checks(engine: Engine) -> None:
     """
     Run all schema fallback checks at application startup.
@@ -210,6 +259,8 @@ def run_startup_checks(engine: Engine) -> None:
             _check_migration_010(conn)
             _check_migration_014(conn)
             _check_migration_015(conn)
+            _check_accounts_columns(conn)
+            _check_campanias_columns(conn)
         logger.info("Startup schema checks completed")
     except Exception as exc:
         logger.error("Startup schema checks failed: %s", exc)
