@@ -27,7 +27,7 @@ router = APIRouter()
     response_model=LoginResponse,
     summary="Login and obtain JWT token",
 )
-@rate_limit(5, "1/minute")  # 5 attempts per minute
+@rate_limit(5, "minute")  # 5 attempts per minute
 def login(
     request: Request,
     body: LoginRequest,

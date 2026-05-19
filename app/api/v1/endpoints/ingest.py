@@ -64,7 +64,7 @@ def _find_duplicate_lead(db: Session, cuenta_id: Any, payload: dict) -> Lead | N
     summary="Ingest webhook data",
     description="Receive CRM data for a specific account identified by its API key.",
 )
-@rate_limit(100, "1/minute")
+@rate_limit(100, "minute")
 async def ingest_webhook(
     account_api_key: str,
     payload: dict[str, Any],
