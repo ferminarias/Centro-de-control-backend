@@ -13,12 +13,15 @@ bearer_scheme = HTTPBearer(auto_error=False)
 JWT_ALGORITHM = "HS256"
 
 
-def _is_valid_jwt(token: str) -> bool:
+def _check_jwt(token: str) -> str:
+    """Returns 'valid', 'expired', or 'invalid'."""
     try:
         jwt.decode(token, settings.SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        return True
+        return "valid"
+    except jwt.ExpiredSignatureError:
+        return "expired"
     except Exception:
-        return False
+        return "invalid"
 
 
 def verify_admin_key(
@@ -46,9 +49,15 @@ def verify_admin_key(
 
     token = credentials.credentials
 
-    # Accept valid JWT tokens (frontend users)
-    if _is_valid_jwt(token):
+    jwt_status = _check_jwt(token)
+    if jwt_status == "valid":
         return token
+    # Expired JWT → 401 so the frontend refresh interceptor fires
+    if jwt_status == "expired":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+        )
 
     # Accept static admin API key (server-to-server)
     if settings.ADMIN_API_KEY and token == settings.ADMIN_API_KEY:
