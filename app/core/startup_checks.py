@@ -18,6 +18,14 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _table_exists(conn, table: str) -> bool:
+    result = conn.execute(
+        text("SELECT 1 FROM information_schema.tables WHERE table_name = :table"),
+        {"table": table},
+    )
+    return result.fetchone() is not None
+
+
 def _column_exists(conn, table: str, column: str) -> bool:
     result = conn.execute(
         text(
@@ -245,6 +253,24 @@ def _check_campanias_columns(conn) -> None:
         logger.warning("Startup check: added columns to campanias: %s", applied)
 
 
+def _check_prode_users_table(conn) -> None:
+    if not _table_exists(conn, "prode_users"):
+        conn.execute(text("""
+            CREATE TABLE prode_users (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                email VARCHAR(255) UNIQUE NOT NULL,
+                nombre VARCHAR(100) NOT NULL,
+                apellido VARCHAR(100) NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                activo BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """))
+        conn.commit()
+        logger.warning("Startup check: created prode_users table")
+
+
 def run_startup_checks(engine: Engine) -> None:
     """
     Run all schema fallback checks at application startup.
@@ -261,6 +287,7 @@ def run_startup_checks(engine: Engine) -> None:
             _check_migration_015(conn)
             _check_accounts_columns(conn)
             _check_campanias_columns(conn)
+            _check_prode_users_table(conn)
         logger.info("Startup schema checks completed")
     except Exception as exc:
         logger.error("Startup schema checks failed: %s", exc)

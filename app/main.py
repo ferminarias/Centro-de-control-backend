@@ -4,6 +4,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.router import api_router
+from app.prode.router import prode_router
 from app.core.audit_middleware import AuditMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine
@@ -64,6 +65,7 @@ app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(AuditMiddleware)
 
 app.include_router(api_router)
+app.include_router(prode_router)
 
 # OpenTelemetry tracing (no-op if OTEL_EXPORTER_OTLP_ENDPOINT is not set)
 setup_tracing(app)

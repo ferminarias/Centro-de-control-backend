@@ -23,6 +23,7 @@ from app.models.voip import (
     PbxNode, SipProvider, SipTrunk,
 )
 from app.models.webhook import Webhook, WebhookLog
+from app.prode.models import ProdeUser
 
 __all__ = [
     # Campaigns (consolidado VoIP + Contact Center)
@@ -39,4 +40,5 @@ __all__ = [
     "Lead", "LeadBase", "LeadTag", "Lote", "Nota", "Record",
     "Role", "RoleModulePermission", "RoutingRule", "Subtipificacion", "Tag", "Tarea", 
     "Tipificacion", "TipificacionExterna", "UIModule", "User", "Webhook", "WebhookLog",
+    "ProdeUser",
 ]
