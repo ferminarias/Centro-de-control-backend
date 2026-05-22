@@ -49,19 +49,15 @@ export default function Login() {
       <div className="relative w-full max-w-sm animate-slide-up">
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          {/* Placeholder — reemplazar con <img src={logo} /> cuando tengas el logo */}
-          <div className="w-11 h-11 rounded-xl bg-bg-elevated border border-border flex items-center justify-center mb-5 shadow-accent">
-            <NodsIcon />
-          </div>
+          <img
+            src="/logo-nods.png"
+            alt="Grupo Nods"
+            className="h-10 w-auto mb-6 object-contain"
+          />
 
-          <div className="text-center">
-            <p className="text-[10px] font-mori font-semibold tracking-[0.2em] uppercase text-content-muted mb-1.5">
-              Grupo Nods
-            </p>
-            <h1 className="text-2xl font-mori font-semibold text-content-primary tracking-tight">
-              Prode Mundial 2026
-            </h1>
-          </div>
+          <h1 className="text-2xl font-mori font-semibold text-content-primary tracking-tight">
+            Prode Mundial 2026
+          </h1>
         </div>
 
         {/* Card */}
@@ -127,15 +123,6 @@ export default function Login() {
         </p>
       </div>
     </div>
-  )
-}
-
-function NodsIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="10" cy="10" r="8" stroke="#1946E3" strokeWidth="1.5" />
-      <path d="M6.5 10.5L9 13L13.5 7.5" stroke="#1946E3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   )
 }
 

@@ -91,20 +91,16 @@ export default function Dashboard() {
         {/* Logo */}
         <div className="px-4 py-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-bg-elevated border border-border flex items-center justify-center shrink-0">
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="10" r="8" stroke="#1946E3" strokeWidth="1.5" />
-                <path d="M6.5 10.5L9 13L13.5 7.5" stroke="#1946E3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[9px] font-semibold tracking-[0.18em] uppercase text-content-muted leading-none mb-0.5">
-                Grupo Nods
-              </p>
-              <p className="text-sm font-semibold text-content-primary leading-none">
-                Prode 2026
-              </p>
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <img
+              src="/logo-nods.png"
+              alt="Grupo Nods"
+              className="h-5 w-auto object-contain object-left"
+            />
+            <p className="text-[10px] font-semibold text-content-muted leading-none tracking-wide">
+              Prode Mundial 2026
+            </p>
+          </div>
           </div>
         </div>
 
