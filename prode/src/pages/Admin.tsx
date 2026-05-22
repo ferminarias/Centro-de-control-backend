@@ -51,12 +51,11 @@ export default function Admin() {
     try {
       const res = await fetch('/api/prode/admin/users', {
         method: 'POST',
-        headers: { ...authHeaders, 'x-admin-key': '' },
+        headers: authHeaders,
         body: JSON.stringify({ ...form, password: DEFAULT_PASSWORD }),
       })
       if (!res.ok) {
         const d = await res.json()
-        // Fallback: try via admin key if needed — shouldn't happen since we use session auth
         throw new Error(d.detail || 'Error al crear usuario')
       }
       setModal(null)

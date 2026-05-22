@@ -31,8 +31,8 @@ def _require_admin(current_user: ProdeUser = Depends(get_current_prode_user)) ->
     "/admin/users",
     response_model=ProdeUserResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Crear usuario Prode (admin key)",
-    dependencies=[Depends(_verify_admin_key)],
+    summary="Crear usuario Prode",
+    dependencies=[Depends(_require_admin)],
 )
 def create_prode_user(body: ProdeCreateUserRequest, db: Session = Depends(get_db)) -> ProdeUser:
     if db.query(ProdeUser).filter(ProdeUser.email == body.email.lower().strip()).first():
