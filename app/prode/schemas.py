@@ -24,3 +24,10 @@ class ProdeLoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: ProdeUserResponse
+
+
+class ProdeCreateUserRequest(BaseModel):
+    email: str
+    password: str
+    nombre: str
+    apellido: str
