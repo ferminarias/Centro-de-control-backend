@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.v1.router import api_router
+# from app.api.v1.router import api_router  # CRM desactivado temporalmente
 from app.prode.router import prode_router
 from app.core.audit_middleware import AuditMiddleware
 from app.core.config import settings
@@ -38,8 +38,8 @@ run_startup_checks(engine)
 # ─────────────────────────────────────────────────────────────────────────────
 
 app = FastAPI(
-    title="Centro de Control - Multi-Tenant CRM",
-    description="Backend multi-tenant para ingesta y gestión de datos CRM.",
+    title="Prode Mundial 2026 - Grupo Nods",
+    description="Backend del Prode Mundial 2026.",
     version="1.0.0",
 )
 
@@ -64,7 +64,7 @@ app.add_middleware(MetricsMiddleware)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(AuditMiddleware)
 
-app.include_router(api_router)
+# app.include_router(api_router)  # CRM desactivado temporalmente
 app.include_router(prode_router)
 
 # OpenTelemetry tracing (no-op if OTEL_EXPORTER_OTLP_ENDPOINT is not set)
