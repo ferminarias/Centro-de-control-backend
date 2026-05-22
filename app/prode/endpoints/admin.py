@@ -52,6 +52,24 @@ def create_prode_user(body: ProdeCreateUserRequest, db: Session = Depends(get_db
     return user
 
 
+@router.post(
+    "/admin/promote",
+    response_model=ProdeUserResponse,
+    summary="Promover usuario a admin (admin key)",
+    dependencies=[Depends(_verify_admin_key)],
+)
+def promote_to_admin(body: dict, db: Session = Depends(get_db)) -> ProdeUser:
+    email = body.get("email", "").lower().strip()
+    user = db.query(ProdeUser).filter(ProdeUser.email == email).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+    user.is_admin = True
+    user.must_change_password = False
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 @router.get(
     "/admin/users",
     response_model=list[ProdeUserResponse],
