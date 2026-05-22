@@ -6,6 +6,8 @@ interface ProdeUser {
   nombre: string
   apellido: string
   email: string
+  is_admin: boolean
+  must_change_password: boolean
 }
 
 interface Equipo {
@@ -57,7 +59,10 @@ export default function Dashboard() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(setUser)
+      .then((data: ProdeUser) => {
+        if (data.must_change_password) { navigate('/change-password'); return }
+        setUser(data)
+      })
       .catch(() => { localStorage.removeItem('prode_token'); navigate('/') })
   }, [navigate])
 
@@ -146,6 +151,15 @@ export default function Dashboard() {
               <p className="text-[11px] text-content-muted truncate">{user.email}</p>
             </div>
           </div>
+          {user?.is_admin && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="w-full mt-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-content-muted hover:text-content-primary hover:bg-bg-elevated transition-all duration-150"
+            >
+              <IconAdmin />
+              Panel admin
+            </button>
+          )}
           <button
             onClick={logout}
             className="w-full mt-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-content-muted hover:text-red-400 hover:bg-red-500/5 transition-all duration-150"
@@ -364,6 +378,15 @@ function IconMenu() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
       <path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconAdmin() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="4.5" r="2.5" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M1.5 12c0-2.5 2.5-4 5.5-4s5.5 1.5 5.5 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   )
 }

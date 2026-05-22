@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -17,6 +18,8 @@ class ProdeUserResponse(BaseModel):
     nombre: str
     apellido: str
     activo: bool
+    is_admin: bool
+    must_change_password: bool
     created_at: datetime
 
 
@@ -31,3 +34,17 @@ class ProdeCreateUserRequest(BaseModel):
     password: str
     nombre: str
     apellido: str
+    is_admin: bool = False
+
+
+class ProdeUpdateUserRequest(BaseModel):
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    activo: Optional[bool] = None
+    is_admin: Optional[bool] = None
+    new_password: Optional[str] = None
+
+
+class ProdeChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str

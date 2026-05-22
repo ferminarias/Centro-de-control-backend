@@ -263,12 +263,26 @@ def _check_prode_users_table(conn) -> None:
                 apellido VARCHAR(100) NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
                 activo BOOLEAN DEFAULT TRUE,
+                is_admin BOOLEAN DEFAULT FALSE,
+                must_change_password BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
                 updated_at TIMESTAMPTZ DEFAULT NOW()
             )
         """))
         conn.commit()
         logger.warning("Startup check: created prode_users table")
+        return
+
+    # Add new columns to existing table (idempotent)
+    new_cols = [
+        ("is_admin", "BOOLEAN DEFAULT FALSE"),
+        ("must_change_password", "BOOLEAN DEFAULT TRUE"),
+    ]
+    for col, definition in new_cols:
+        if not _column_exists(conn, "prode_users", col):
+            conn.execute(text(f"ALTER TABLE prode_users ADD COLUMN {col} {definition}"))
+            conn.commit()
+            logger.warning("Startup check: added column prode_users.%s", col)
 
 
 def run_startup_checks(engine: Engine) -> None:
