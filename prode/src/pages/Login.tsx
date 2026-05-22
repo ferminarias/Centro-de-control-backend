@@ -27,7 +27,7 @@ export default function Login() {
 
       const data = await res.json()
       localStorage.setItem('prode_token', data.access_token)
-      navigate('/dashboard')
+      navigate(data.user.must_change_password ? '/change-password' : '/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
     } finally {
