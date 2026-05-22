@@ -37,40 +37,25 @@ export default function Login() {
 
   return (
     <div className="min-h-dvh bg-bg-base flex items-center justify-center px-4 animate-fade-in">
-      {/* Background subtle glow */}
+      {/* Background glow — azul Nods */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(74,222,128,0.06) 0%, transparent 70%)',
+            'radial-gradient(ellipse 55% 45% at 50% 0%, rgba(25,70,227,0.18) 0%, transparent 70%)',
         }}
       />
 
       <div className="relative w-full max-w-sm animate-slide-up">
-        {/* Logo area */}
+        {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          {/* Logo placeholder — reemplazar con <img> cuando tengas el logo */}
-          <div className="w-12 h-12 rounded-xl bg-bg-elevated border border-border flex items-center justify-center mb-5">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle cx="12" cy="12" r="10" stroke="#4ADE80" strokeWidth="1.5" />
-              <path
-                d="M8 12l2.5 2.5L16 9"
-                stroke="#4ADE80"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+          {/* Placeholder — reemplazar con <img src={logo} /> cuando tengas el logo */}
+          <div className="w-11 h-11 rounded-xl bg-bg-elevated border border-border flex items-center justify-center mb-5 shadow-accent">
+            <NodsIcon />
           </div>
 
           <div className="text-center">
-            <p className="text-xs font-mori font-semibold tracking-[0.2em] uppercase text-content-muted mb-1">
+            <p className="text-[10px] font-mori font-semibold tracking-[0.2em] uppercase text-content-muted mb-1.5">
               Grupo Nods
             </p>
             <h1 className="text-2xl font-mori font-semibold text-content-primary tracking-tight">
@@ -80,7 +65,7 @@ export default function Login() {
         </div>
 
         {/* Card */}
-        <div className="card p-7">
+        <div className="card p-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
@@ -118,52 +103,16 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  className="shrink-0"
-                >
-                  <circle cx="7" cy="7" r="6" stroke="#F87171" strokeWidth="1.2" />
-                  <path
-                    d="M7 4.5v3M7 9.5v.5"
-                    stroke="#F87171"
-                    strokeWidth="1.2"
-                    strokeLinecap="round"
-                  />
-                </svg>
+              <div className="flex items-center gap-2 bg-red-500/8 border border-red-500/20 rounded-lg px-3 py-2.5">
+                <AlertIcon />
                 <p className="text-xs font-mori text-red-400">{error}</p>
               </div>
             )}
 
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={loading}
-            >
+            <button type="submit" className="btn-primary" disabled={loading}>
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg
-                    className="animate-spin h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
+                  <SpinnerIcon />
                   Ingresando...
                 </span>
               ) : (
@@ -173,11 +122,37 @@ export default function Login() {
           </form>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs font-mori text-content-muted mt-6">
-          © {new Date().getFullYear()} Grupo Nods. Uso interno.
+        <p className="text-center text-[11px] font-mori text-content-muted mt-6">
+          © {new Date().getFullYear()} Grupo Nods · Uso interno
         </p>
       </div>
     </div>
+  )
+}
+
+function NodsIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="10" cy="10" r="8" stroke="#1946E3" strokeWidth="1.5" />
+      <path d="M6.5 10.5L9 13L13.5 7.5" stroke="#1946E3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function AlertIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
+      <circle cx="7" cy="7" r="5.5" stroke="#EF4444" strokeWidth="1.2" />
+      <path d="M7 4.5v3M7 9.5v.3" stroke="#EF4444" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function SpinnerIcon() {
+  return (
+    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
   )
 }

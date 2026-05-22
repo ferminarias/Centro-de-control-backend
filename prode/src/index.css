@@ -42,8 +42,8 @@
   }
 
   body {
-    background-color: #0A0A0A;
-    color: #F5F5F5;
+    background-color: #000000;
+    color: #FFFFFF;
     min-height: 100dvh;
   }
 
@@ -56,8 +56,8 @@
   }
 
   ::selection {
-    background-color: rgba(74, 222, 128, 0.25);
-    color: #F5F5F5;
+    background-color: rgba(25, 70, 227, 0.30);
+    color: #FFFFFF;
   }
 
   ::-webkit-scrollbar {
@@ -66,22 +66,22 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #0A0A0A;
+    background: #000000;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #282828;
+    background: #2A2A2A;
     border-radius: 2px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #3A3A3A;
+    background: #404040;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply w-full bg-accent text-content-inverse font-mori font-semibold py-3 px-6 rounded-lg
+    @apply w-full bg-accent text-white font-mori font-semibold py-3 px-6 rounded-lg
            transition-all duration-200 hover:bg-accent-hover active:scale-[0.98]
            focus:outline-none focus:ring-2 focus:ring-accent/40;
   }
@@ -97,8 +97,7 @@
            border border-border rounded-lg px-4 py-3 text-sm
            placeholder:text-content-muted
            transition-all duration-200
-           focus:outline-none focus:border-accent/50 focus:shadow-input-focus
-           autofill:bg-bg-elevated;
+           focus:outline-none focus:border-accent/50 focus:shadow-input-focus;
   }
 
   .card {
@@ -111,6 +110,6 @@
   }
 
   .label {
-    @apply text-xs font-mori font-semibold text-content-secondary uppercase tracking-wider;
+    @apply text-[10px] font-mori font-semibold text-content-muted uppercase tracking-[0.12em];
   }
 }
