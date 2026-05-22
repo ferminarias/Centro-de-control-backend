@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'PP Mori';
+  src: url('/fonts/PPMori-Extralight.otf') format('opentype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Mori';
+  src: url('/fonts/PPMori-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Mori';
+  src: url('/fonts/PPMori-SemiBold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-family: 'PP Mori', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: #0A0A0A;
+    color: #F5F5F5;
+    min-height: 100dvh;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+
+  input, button, select, textarea {
+    font-family: 'PP Mori', sans-serif;
+  }
+
+  ::selection {
+    background-color: rgba(74, 222, 128, 0.25);
+    color: #F5F5F5;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0A0A0A;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #282828;
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3A3A3A;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply w-full bg-accent text-content-inverse font-mori font-semibold py-3 px-6 rounded-lg
+           transition-all duration-200 hover:bg-accent-hover active:scale-[0.98]
+           focus:outline-none focus:ring-2 focus:ring-accent/40;
+  }
+
+  .btn-ghost {
+    @apply w-full bg-transparent text-content-secondary font-mori font-normal py-3 px-6 rounded-lg
+           border border-border transition-all duration-200 hover:border-border-strong hover:text-content-primary
+           focus:outline-none focus:ring-2 focus:ring-border-strong;
+  }
+
+  .input-field {
+    @apply w-full bg-bg-elevated text-content-primary font-mori font-light
+           border border-border rounded-lg px-4 py-3 text-sm
+           placeholder:text-content-muted
+           transition-all duration-200
+           focus:outline-none focus:border-accent/50 focus:shadow-input-focus
+           autofill:bg-bg-elevated;
+  }
+
+  .card {
+    @apply bg-bg-surface border border-border rounded-xl shadow-card
+           transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply hover:shadow-card-hover hover:border-border-strong;
+  }
+
+  .label {
+    @apply text-xs font-mori font-semibold text-content-secondary uppercase tracking-wider;
+  }
+}
