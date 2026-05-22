@@ -91,14 +91,17 @@ export default function Dashboard() {
         {/* Logo */}
         <div className="px-4 py-5 border-b border-border">
           <div className="flex items-center gap-3">
-          <div className="flex flex-col gap-1.5">
-            <img
-              src="/logo-nods.png"
-              alt="Grupo Nods"
-              className="h-5 w-auto object-contain object-left"
-            />
-            <p className="text-[10px] font-semibold text-content-muted leading-none tracking-wide">
-              Prode Mundial 2026
+          {/* Logo: imagen escalada a 46px alto, contenedor corta a 32px → solo "NODS" visible */}
+          <div className="flex flex-col gap-2">
+            <div className="overflow-hidden" style={{ height: '32px' }}>
+              <img
+                src="/logo-nods.png"
+                alt="NODS"
+                style={{ height: '46px', width: 'auto' }}
+              />
+            </div>
+            <p className="text-[10px] font-semibold text-content-muted tracking-widest uppercase leading-none">
+              Prode 2026
             </p>
           </div>
           </div>

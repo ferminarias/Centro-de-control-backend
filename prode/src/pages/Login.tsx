@@ -37,7 +37,7 @@ export default function Login() {
 
   return (
     <div className="min-h-dvh bg-bg-base flex items-center justify-center px-4 animate-fade-in">
-      {/* Background glow — azul Nods */}
+      {/* Background glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -47,27 +47,26 @@ export default function Login() {
       />
 
       <div className="relative w-full max-w-sm animate-slide-up">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-10">
-          <img
-            src="/logo-nods.png"
-            alt="Grupo Nods"
-            className="h-10 w-auto mb-6 object-contain"
-          />
+        {/* Card — logo + título + form todo adentro */}
+        <div className="card p-8">
+          {/* Header */}
+          <div className="flex flex-col items-center mb-8">
+            <img
+              src="/logo-nods.png"
+              alt="Grupo Nods"
+              className="h-12 w-auto object-contain mb-5"
+            />
+            <div className="w-full h-px bg-border mb-6" />
+            <h1 className="text-xl font-mori font-semibold text-content-primary tracking-tight text-center">
+              Prode Mundial 2026
+            </h1>
+          </div>
 
-          <h1 className="text-2xl font-mori font-semibold text-content-primary tracking-tight">
-            Prode Mundial 2026
-          </h1>
-        </div>
-
-        {/* Card */}
-        <div className="card p-6">
+          {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="label">
-                  Email
-                </label>
+                <label htmlFor="email" className="label">Email</label>
                 <input
                   id="email"
                   type="email"
@@ -82,9 +81,7 @@ export default function Login() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="password" className="label">
-                  Contraseña
-                </label>
+                <label htmlFor="password" className="label">Contraseña</label>
                 <input
                   id="password"
                   type="password"
@@ -118,7 +115,7 @@ export default function Login() {
           </form>
         </div>
 
-        <p className="text-center text-[11px] font-mori text-content-muted mt-6">
+        <p className="text-center text-[11px] font-mori text-content-muted mt-5">
           © {new Date().getFullYear()} Grupo Nods · Uso interno
         </p>
       </div>
