@@ -205,3 +205,42 @@ def set_resultado_manual(
 
     pts_updated = apply_resultado_manual(db, partido, body.goles_local, body.goles_visitante)
     return {"predicciones_puntuadas": pts_updated}
+
+
+@router.patch(
+    "/admin/partidos/{partido_id}/simular",
+    summary="[TEST] Poner un partido en estado en_juego con un marcador",
+    dependencies=[Depends(_require_admin)],
+)
+def simular_partido_live(
+    partido_id: int,
+    body: ResultadoManualRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    partido = db.query(ProdePartido).filter(ProdePartido.id == partido_id).first()
+    if not partido:
+        raise HTTPException(status_code=404, detail="Partido no encontrado")
+    partido.goles_local = body.goles_local
+    partido.goles_visitante = body.goles_visitante
+    partido.estado = "en_juego"
+    db.commit()
+    return {"ok": True, "partido_id": partido_id, "estado": "en_juego"}
+
+
+@router.patch(
+    "/admin/partidos/{partido_id}/resetear",
+    summary="[TEST] Resetear un partido a estado programado",
+    dependencies=[Depends(_require_admin)],
+)
+def resetear_partido(
+    partido_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    partido = db.query(ProdePartido).filter(ProdePartido.id == partido_id).first()
+    if not partido:
+        raise HTTPException(status_code=404, detail="Partido no encontrado")
+    partido.goles_local = None
+    partido.goles_visitante = None
+    partido.estado = "programado"
+    db.commit()
+    return {"ok": True, "partido_id": partido_id, "estado": "programado"}

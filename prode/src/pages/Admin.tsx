@@ -12,6 +12,14 @@ interface ProdeUser {
   created_at: string
 }
 
+interface PartidoSimple {
+  id: number
+  equipo_local: { nombre: string } | null
+  equipo_visitante: { nombre: string } | null
+  fecha: string
+  estado: string
+}
+
 const DEFAULT_PASSWORD = 'Nodsprode'
 
 export default function Admin() {
@@ -24,6 +32,11 @@ export default function Admin() {
   const [actionLoading, setActionLoading] = useState(false)
   const [toast, setToast] = useState('')
   const [syncing, setSyncing] = useState(false)
+  const [partidos, setPartidos] = useState<PartidoSimple[]>([])
+  const [simPartidoId, setSimPartidoId] = useState<number | ''>('')
+  const [simGl, setSimGl] = useState(1)
+  const [simGv, setSimGv] = useState(0)
+  const [simLoading, setSimLoading] = useState(false)
 
   const token = localStorage.getItem('prode_token')
 
@@ -46,6 +59,47 @@ export default function Admin() {
   }, [])  // eslint-disable-line
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
+
+  useEffect(() => {
+    fetch('/api/prode/partidos', { headers: authHeaders })
+      .then(r => r.json())
+      .then((data: PartidoSimple[]) => setPartidos(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, []) // eslint-disable-line
+
+  async function simularPartido() {
+    if (!simPartidoId) return
+    setSimLoading(true)
+    try {
+      const res = await fetch(`/api/prode/admin/partidos/${simPartidoId}/simular`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({ goles_local: simGl, goles_visitante: simGv }),
+      })
+      if (!res.ok) throw new Error('Error al simular')
+      showToast(`Partido simulado en vivo: ${simGl}-${simGv}`)
+    } catch {
+      showToast('Error al simular partido')
+    } finally {
+      setSimLoading(false)
+    }
+  }
+
+  async function resetearPartido() {
+    if (!simPartidoId) return
+    setSimLoading(true)
+    try {
+      await fetch(`/api/prode/admin/partidos/${simPartidoId}/resetear`, {
+        method: 'PATCH',
+        headers: authHeaders,
+      })
+      showToast('Partido reseteado a programado')
+    } catch {
+      showToast('Error al resetear')
+    } finally {
+      setSimLoading(false)
+    }
+  }
 
   async function createUser() {
     setActionLoading(true)
@@ -254,6 +308,75 @@ export default function Admin() {
               </tbody>
             </table>
           )}
+        </div>
+
+        {/* Simulador */}
+        <div className="mt-8">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Solo pruebas</span>
+            <h2 className="text-sm font-semibold text-content-primary">Simulador de partido en vivo</h2>
+          </div>
+          <div className="card p-5 flex flex-col gap-4">
+            <p className="text-xs text-content-muted">Ponés un partido en estado "en_juego" con el marcador que elijas para probar cómo se ve en el dashboard. Resetealo después.</p>
+
+            {/* Selector de partido */}
+            <div className="flex flex-col gap-1.5">
+              <label className="label">Partido</label>
+              <select
+                value={simPartidoId}
+                onChange={e => setSimPartidoId(e.target.value ? Number(e.target.value) : '')}
+                className="input-field"
+              >
+                <option value="">Seleccioná un partido...</option>
+                {partidos.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.equipo_local?.nombre ?? '?'} vs {p.equipo_visitante?.nombre ?? '?'}
+                    {p.estado === 'en_juego' ? ' 🟢 (en vivo)' : p.estado === 'finalizado' ? ' (finalizado)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Marcador */}
+            <div className="flex items-end gap-3">
+              <div className="flex flex-col gap-1.5 flex-1">
+                <label className="label">Goles local</label>
+                <input
+                  type="number" min={0} max={20}
+                  value={simGl}
+                  onChange={e => setSimGl(Math.max(0, Number(e.target.value)))}
+                  className="input-field text-center text-lg font-semibold"
+                />
+              </div>
+              <span className="text-xl text-content-muted font-light pb-2.5">—</span>
+              <div className="flex flex-col gap-1.5 flex-1">
+                <label className="label">Goles visitante</label>
+                <input
+                  type="number" min={0} max={20}
+                  value={simGv}
+                  onChange={e => setSimGv(Math.max(0, Number(e.target.value)))}
+                  className="input-field text-center text-lg font-semibold"
+                />
+              </div>
+              <div className="flex gap-2 pb-0.5">
+                <button
+                  onClick={simularPartido}
+                  disabled={simLoading || !simPartidoId}
+                  className="flex items-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-40"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {simLoading ? 'Simulando...' : 'Simular'}
+                </button>
+                <button
+                  onClick={resetearPartido}
+                  disabled={simLoading || !simPartidoId}
+                  className="text-sm font-semibold px-4 py-2.5 rounded-lg border border-border text-content-muted hover:text-content-primary hover:border-border-strong transition-colors disabled:opacity-40"
+                >
+                  Resetear
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
 
