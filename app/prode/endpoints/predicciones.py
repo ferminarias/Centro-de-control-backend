@@ -11,8 +11,8 @@ from app.prode.schemas import PrediccionConPartidoResponse, PrediccionRequest, P
 router = APIRouter(tags=["Prode - Predicciones"])
 
 
-@router.post("/predicciones", response_model=PrediccionResponse, status_code=status.HTTP_200_OK)
-def upsert_prediccion(
+@router.post("/predicciones", response_model=PrediccionResponse, status_code=status.HTTP_201_CREATED)
+def create_prediccion(
     body: PrediccionRequest,
     current_user: ProdeUser = Depends(get_current_prode_user),
     db: Session = Depends(get_db),
@@ -25,13 +25,13 @@ def upsert_prediccion(
     if partido.estado != "programado" or partido.fecha <= now:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="El partido ya comenzó, no se puede modificar el pronóstico",
+            detail="El partido ya comenzó, no se puede enviar un pronóstico",
         )
 
     if body.goles_local < 0 or body.goles_visitante < 0:
         raise HTTPException(status_code=422, detail="Los goles no pueden ser negativos")
 
-    pred = (
+    existing = (
         db.query(ProdePrediccion)
         .filter(
             ProdePrediccion.user_id == current_user.id,
@@ -39,20 +39,19 @@ def upsert_prediccion(
         )
         .first()
     )
-
-    if pred is None:
-        pred = ProdePrediccion(
-            user_id=current_user.id,
-            partido_id=body.partido_id,
-            goles_local=body.goles_local,
-            goles_visitante=body.goles_visitante,
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya registraste un pronóstico para este partido",
         )
-        db.add(pred)
-    else:
-        pred.goles_local = body.goles_local
-        pred.goles_visitante = body.goles_visitante
-        pred.puntos = None
 
+    pred = ProdePrediccion(
+        user_id=current_user.id,
+        partido_id=body.partido_id,
+        goles_local=body.goles_local,
+        goles_visitante=body.goles_visitante,
+    )
+    db.add(pred)
     db.commit()
     db.refresh(pred)
     return pred

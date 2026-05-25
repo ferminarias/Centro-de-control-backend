@@ -356,13 +356,41 @@ function FixtureContent(_: { user: ProdeUser }) {
       const res = await fetch('/api/prode/partidos', {
         headers: { Authorization: `Bearer ${token}` },
       })
-      setPartidos(await res.json())
+      const data = await res.json()
+      setPartidos(Array.isArray(data) ? data : [])
     } finally {
       setLoading(false)
     }
   }, [token])
 
-  useEffect(() => { fetchPartidos() }, [fetchPartidos])
+  // Refresh live match data every 30 seconds when any match is en_juego
+  useEffect(() => {
+    fetchPartidos()
+  }, [fetchPartidos])
+
+  useEffect(() => {
+    const hayEnVivo = partidos.some(p => p.estado === 'en_juego')
+    if (!hayEnVivo) return
+    const interval = setInterval(async () => {
+      try {
+        // Lightweight live endpoint (server-cached, won't hammer API)
+        const res = await fetch('/api/prode/partidos/live', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) return
+        const live: Partido[] = await res.json()
+        if (live.length > 0) {
+          setPartidos(prev =>
+            prev.map(p => {
+              const updated = live.find(l => l.id === p.id)
+              return updated ? { ...p, ...updated } : p
+            })
+          )
+        }
+      } catch { /* ignore */ }
+    }, 30_000)
+    return () => clearInterval(interval)
+  }, [partidos, token])
 
   async function savePred(partidoId: number, gl: number, gv: number) {
     const res = await fetch('/api/prode/predicciones', {
@@ -375,7 +403,7 @@ function FixtureContent(_: { user: ProdeUser }) {
       showToast(d.detail || 'Error al guardar')
       return
     }
-    showToast('Pronóstico guardado')
+    showToast('Pronóstico guardado ✓')
     fetchPartidos()
   }
 
@@ -385,6 +413,7 @@ function FixtureContent(_: { user: ProdeUser }) {
     : partidos.filter(p => p.grupo === grupoActivo)
 
   const eliminatoriasFases = ['r32', 'r16', 'cuartos', 'semis', 'tercero', 'final']
+  const hayEnVivo = partidos.some(p => p.estado === 'en_juego')
 
   if (loading) {
     return (
@@ -405,21 +434,35 @@ function FixtureContent(_: { user: ProdeUser }) {
 
   return (
     <div className="flex flex-col gap-4 animate-slide-up">
+      {/* Live indicator */}
+      {hayEnVivo && (
+        <div className="flex items-center gap-2 bg-status-draw/8 border border-status-draw/20 rounded-xl px-4 py-2.5">
+          <span className="w-2 h-2 rounded-full bg-status-draw animate-pulse shrink-0" />
+          <p className="text-xs font-semibold text-status-draw">Partidos en vivo — actualizando cada 30s</p>
+        </div>
+      )}
+
       {/* Tabs grupos / eliminatorias */}
       <div className="flex gap-1 flex-wrap">
-        {GRUPOS.map(g => (
-          <button
-            key={g}
-            onClick={() => setGrupoActivo(g)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              grupoActivo === g
-                ? 'bg-accent text-white'
-                : 'bg-bg-surface text-content-muted hover:text-content-primary border border-border'
-            }`}
-          >
-            {g}
-          </button>
-        ))}
+        {GRUPOS.map(g => {
+          const tieneEnVivo = partidos.some(p => p.grupo === g && p.estado === 'en_juego')
+          return (
+            <button
+              key={g}
+              onClick={() => setGrupoActivo(g)}
+              className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                grupoActivo === g
+                  ? 'bg-accent text-white'
+                  : 'bg-bg-surface text-content-muted hover:text-content-primary border border-border'
+              }`}
+            >
+              {g}
+              {tieneEnVivo && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-status-draw rounded-full border border-bg-base" />
+              )}
+            </button>
+          )
+        })}
         <button
           onClick={() => setGrupoActivo('eliminatorias')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ml-1 ${
@@ -483,18 +526,42 @@ function FixtureContent(_: { user: ProdeUser }) {
   )
 }
 
+// Approximate match minute from kick-off time
+function useLiveMinute(fecha: string, estado: string): string {
+  const [label, setLabel] = useState('')
+  useEffect(() => {
+    if (estado !== 'en_juego') { setLabel(''); return }
+    function calc() {
+      const elapsed = (Date.now() - new Date(fecha).getTime()) / 60000
+      if (elapsed < 0) return setLabel('LIVE')
+      if (elapsed <= 45) return setLabel(`${Math.min(45, Math.floor(elapsed))}'`)
+      if (elapsed <= 60) return setLabel('HT')
+      const min2 = Math.floor(elapsed - 15)
+      if (min2 <= 90) return setLabel(`${Math.min(90, min2)}'`)
+      setLabel('90+')
+    }
+    calc()
+    const t = setInterval(calc, 30_000)
+    return () => clearInterval(t)
+  }, [fecha, estado])
+  return label
+}
+
 function PartidoRow({ partido, onSave }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void }) {
   const { date, time } = formatFecha(partido.fecha)
-  const [gl, setGl] = useState(partido.mi_prediccion?.goles_local ?? 0)
-  const [gv, setGv] = useState(partido.mi_prediccion?.goles_visitante ?? 0)
+  const [gl, setGl] = useState(0)
+  const [gv, setGv] = useState(0)
   const [saving, setSaving] = useState(false)
   const ahora = new Date()
   const cerrado = partido.estado !== 'programado' || new Date(partido.fecha) <= ahora
+  const yaPronosticado = partido.mi_prediccion !== null
+  const minuto = useLiveMinute(partido.fecha, partido.estado)
 
-  useEffect(() => {
-    setGl(partido.mi_prediccion?.goles_local ?? 0)
-    setGv(partido.mi_prediccion?.goles_visitante ?? 0)
-  }, [partido.mi_prediccion])
+  const puntosColor = partido.mi_prediccion?.puntos === 3
+    ? 'text-status-win'
+    : partido.mi_prediccion?.puntos === 1
+      ? 'text-status-draw'
+      : 'text-status-loss'
 
   async function handleSave() {
     setSaving(true)
@@ -502,18 +569,24 @@ function PartidoRow({ partido, onSave }: { partido: Partido; onSave: (id: number
     setSaving(false)
   }
 
-  const puntosColor = partido.mi_prediccion?.puntos === 3
-    ? 'text-status-win'
-    : partido.mi_prediccion?.puntos === 1
-      ? 'text-status-draw'
-      : 'text-content-muted'
-
   return (
-    <div className="px-4 py-4 flex items-center gap-3">
-      {/* Fecha */}
-      <div className="w-20 shrink-0 hidden sm:block">
-        <p className="text-xs text-content-secondary capitalize leading-tight">{date}</p>
-        <p className="text-xs text-content-muted">{time}</p>
+    <div className={`px-4 py-4 flex items-center gap-3 ${partido.estado === 'en_juego' ? 'bg-status-draw/5' : ''}`}>
+      {/* Fecha / minuto */}
+      <div className="w-20 shrink-0 hidden sm:block text-center">
+        {partido.estado === 'en_juego' ? (
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-status-draw uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-status-draw animate-pulse" />
+              LIVE
+            </span>
+            {minuto && <span className="text-xs font-semibold text-status-draw tabular-nums">{minuto}</span>}
+          </div>
+        ) : (
+          <>
+            <p className="text-xs text-content-secondary capitalize leading-tight">{date}</p>
+            <p className="text-xs text-content-muted">{time}</p>
+          </>
+        )}
       </div>
 
       {/* Local */}
@@ -524,52 +597,58 @@ function PartidoRow({ partido, onSave }: { partido: Partido; onSave: (id: number
         <Flag codigo={partido.equipo_local?.codigo_iso ?? ''} className="w-6 rounded-sm shrink-0" />
       </div>
 
-      {/* Score / Predicción */}
-      <div className="shrink-0 flex flex-col items-center gap-1.5 px-2">
+      {/* Centro: marcador / predicción */}
+      <div className="shrink-0 flex flex-col items-center gap-1 px-2 min-w-[90px]">
         {partido.estado === 'finalizado' ? (
-          <div className="text-center">
-            <p className="text-base font-semibold text-content-primary tabular-nums">
+          <>
+            <p className="text-lg font-bold text-content-primary tabular-nums leading-none">
               {partido.goles_local} - {partido.goles_visitante}
             </p>
-            {partido.mi_prediccion && (
-              <p className={`text-xs font-semibold ${puntosColor}`}>
-                {partido.mi_prediccion.puntos === 3
-                  ? '+3 exacto'
-                  : partido.mi_prediccion.puntos === 1
-                    ? '+1 resultado'
-                    : '0 pts'}
+            {yaPronosticado ? (
+              <p className={`text-[11px] font-semibold ${puntosColor}`}>
+                {partido.mi_prediccion!.puntos === 3
+                  ? '⚽ +3 exacto'
+                  : partido.mi_prediccion!.puntos === 1
+                    ? '✓ +1 resultado'
+                    : '✗ 0 pts'}
               </p>
+            ) : (
+              <p className="text-[11px] text-content-muted">sin pronós.</p>
             )}
-            {!partido.mi_prediccion && (
-              <p className="text-xs text-content-muted">sin pronós.</p>
-            )}
-          </div>
+          </>
         ) : partido.estado === 'en_juego' ? (
-          <div className="text-center">
-            <span className="text-xs font-semibold text-status-draw bg-status-draw/10 px-2 py-0.5 rounded-full">
-              En juego
-            </span>
-            {partido.mi_prediccion && (
-              <p className="text-xs text-content-muted mt-1">
-                {partido.mi_prediccion.goles_local}-{partido.mi_prediccion.goles_visitante}
+          <>
+            <p className="text-lg font-bold text-status-draw tabular-nums leading-none">
+              {partido.goles_local ?? 0} - {partido.goles_visitante ?? 0}
+            </p>
+            {yaPronosticado && (
+              <p className="text-[11px] text-content-muted">
+                tu pronós: {partido.mi_prediccion!.goles_local}-{partido.mi_prediccion!.goles_visitante}
               </p>
             )}
+          </>
+        ) : yaPronosticado ? (
+          // Prediction submitted — locked, immutable
+          <div className="flex flex-col items-center gap-0.5">
+            <p className="text-base font-bold text-content-primary tabular-nums leading-none">
+              {partido.mi_prediccion!.goles_local} - {partido.mi_prediccion!.goles_visitante}
+            </p>
+            <span className="text-[10px] font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
+              guardado ✓
+            </span>
           </div>
         ) : (
+          // Open for prediction
           <div className="flex items-center gap-1.5">
             <ScoreInput value={gl} onChange={setGl} disabled={cerrado} />
-            <span className="text-xs text-content-muted font-semibold">-</span>
+            <span className="text-xs text-content-muted font-bold">-</span>
             <ScoreInput value={gv} onChange={setGv} disabled={cerrado} />
             <button
               onClick={handleSave}
               disabled={saving || cerrado}
-              className={`ml-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors ${
-                partido.mi_prediccion
-                  ? 'bg-bg-elevated text-content-secondary hover:bg-border border border-border'
-                  : 'bg-accent text-white hover:bg-accent-hover'
-              } disabled:opacity-40`}
+              className="ml-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-40"
             >
-              {saving ? '...' : partido.mi_prediccion ? '✓' : 'Guardar'}
+              {saving ? '...' : 'Guardar'}
             </button>
           </div>
         )}
