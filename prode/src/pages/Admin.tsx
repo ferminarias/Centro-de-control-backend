@@ -85,6 +85,25 @@ export default function Admin() {
     }
   }
 
+  async function finalizarPartido() {
+    if (!simPartidoId) return
+    setSimLoading(true)
+    try {
+      const res = await fetch(`/api/prode/admin/partidos/${simPartidoId}/finalizar`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({ goles_local: simGl, goles_visitante: simGv }),
+      })
+      if (!res.ok) throw new Error('Error al finalizar')
+      const data = await res.json()
+      showToast(`Partido finalizado · ${data.predicciones_puntuadas} predicciones puntuadas`)
+    } catch {
+      showToast('Error al finalizar partido')
+    } finally {
+      setSimLoading(false)
+    }
+  }
+
   async function resetearPartido() {
     if (!simPartidoId) return
     setSimLoading(true)
@@ -338,7 +357,7 @@ export default function Admin() {
             <h2 className="text-sm font-semibold text-content-primary">Simulador de partido en vivo</h2>
           </div>
           <div className="card p-5 flex flex-col gap-4">
-            <p className="text-xs text-content-muted">Ponés un partido en estado "en_juego" con el marcador que elijas para probar cómo se ve en el dashboard. Resetealo después.</p>
+            <p className="text-xs text-content-muted"><span className="text-emerald-400 font-medium">En vivo</span> — simula el partido en curso. <span className="text-blue-400 font-medium">Finalizar y puntuar</span> — cierra el partido y calcula los puntos de cada predicción. <span className="text-content-secondary font-medium">Resetear</span> — vuelve a programado.</p>
 
             {/* Selector de partido */}
             <div className="flex flex-col gap-1.5">
@@ -379,14 +398,21 @@ export default function Admin() {
                   className="input-field text-center text-lg font-semibold"
                 />
               </div>
-              <div className="flex gap-2 pb-0.5">
+              <div className="flex gap-2 pb-0.5 flex-wrap">
                 <button
                   onClick={simularPartido}
                   disabled={simLoading || !simPartidoId}
                   className="flex items-center gap-2 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-40"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  {simLoading ? 'Simulando...' : 'Simular'}
+                  {simLoading ? 'Cargando...' : 'En vivo'}
+                </button>
+                <button
+                  onClick={finalizarPartido}
+                  disabled={simLoading || !simPartidoId}
+                  className="flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-40"
+                >
+                  ✓ Finalizar y puntuar
                 </button>
                 <button
                   onClick={resetearPartido}

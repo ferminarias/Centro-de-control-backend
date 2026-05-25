@@ -228,6 +228,24 @@ def simular_partido_live(
 
 
 @router.patch(
+    "/admin/partidos/{partido_id}/finalizar",
+    summary="[TEST] Finalizar un partido y calcular puntos",
+    dependencies=[Depends(_require_admin)],
+)
+def finalizar_partido(
+    partido_id: int,
+    body: ResultadoManualRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    partido = db.query(ProdePartido).filter(ProdePartido.id == partido_id).first()
+    if not partido:
+        raise HTTPException(status_code=404, detail="Partido no encontrado")
+    from app.prode.services.sync import apply_resultado_manual
+    pts = apply_resultado_manual(db, partido, body.goles_local, body.goles_visitante)
+    return {"ok": True, "partido_id": partido_id, "estado": "finalizado", "predicciones_puntuadas": pts}
+
+
+@router.patch(
     "/admin/partidos/{partido_id}/resetear",
     summary="[TEST] Resetear un partido a estado programado",
     dependencies=[Depends(_require_admin)],
