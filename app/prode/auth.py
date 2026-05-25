@@ -24,7 +24,12 @@ def hash_password(plain: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    if not hashed:
+        return False  # Google-only users have no password
+    try:
+        return pwd_context.verify(plain, hashed)
+    except Exception:
+        return False
 
 
 def create_access_token(user_id: uuid.UUID, email: str) -> str:

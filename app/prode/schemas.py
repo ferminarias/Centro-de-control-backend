@@ -17,6 +17,7 @@ class ProdeUserResponse(BaseModel):
     email: str
     nombre: str
     apellido: str
+    avatar_url: Optional[str] = None
     activo: bool
     is_admin: bool
     must_change_password: bool

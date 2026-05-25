@@ -277,6 +277,7 @@ def _check_prode_users_table(conn) -> None:
     new_cols = [
         ("is_admin", "BOOLEAN DEFAULT FALSE"),
         ("must_change_password", "BOOLEAN DEFAULT TRUE"),
+        ("avatar_url", "VARCHAR(500)"),
     ]
     for col, definition in new_cols:
         if not _column_exists(conn, "prode_users", col):

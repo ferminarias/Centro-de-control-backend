@@ -9,6 +9,7 @@ interface ProdeUser {
   nombre: string
   apellido: string
   email: string
+  avatar_url: string | null
   is_admin: boolean
   must_change_password: boolean
 }
@@ -195,10 +196,14 @@ export default function Dashboard() {
 
         <div className="px-2 py-3 border-t border-border" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}>
           <div className="px-3 py-2 rounded-lg flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center shrink-0">
-              <span className="text-[11px] font-semibold text-content-secondary">
-                {user.nombre[0]}{user.apellido[0]}
-              </span>
+            <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center shrink-0 overflow-hidden">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <span className="text-[11px] font-semibold text-content-secondary">
+                  {user.nombre[0]}{user.apellido[0]}
+                </span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-content-primary truncate leading-tight">
