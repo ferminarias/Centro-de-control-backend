@@ -157,6 +157,8 @@ export default function Dashboard() {
         lg:translate-x-0 lg:static lg:z-auto
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
+        {/* Dynamic Island / notch spacer */}
+        <div style={{ height: 'env(safe-area-inset-top, 0px)' }} className="shrink-0" />
         <div className="px-4 py-5 border-b border-border">
           <div className="flex flex-col gap-2">
             <div className="overflow-hidden" style={{ height: '32px' }}>
@@ -191,7 +193,7 @@ export default function Dashboard() {
           })}
         </nav>
 
-        <div className="px-2 py-3 border-t border-border">
+        <div className="px-2 py-3 border-t border-border" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}>
           <div className="px-3 py-2 rounded-lg flex items-center gap-3">
             <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center shrink-0">
               <span className="text-[11px] font-semibold text-content-secondary">
@@ -226,7 +228,9 @@ export default function Dashboard() {
 
       {/* Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b border-border bg-bg-base flex items-center px-4 lg:px-6 gap-4 shrink-0">
+        <header className="border-b border-border bg-bg-base flex flex-col shrink-0">
+          <div style={{ height: 'env(safe-area-inset-top, 0px)' }} />
+          <div className="h-14 flex items-center px-4 lg:px-6 gap-4">
           <button
             className="lg:hidden p-1.5 rounded-lg text-content-secondary hover:text-content-primary hover:bg-bg-elevated transition-colors"
             onClick={() => setSidebarOpen(true)}
@@ -270,9 +274,10 @@ export default function Dashboard() {
               </>
             )}
           </div>
+          </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
           {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} />}
           {active === 'fixture' && <FixtureContent user={user} tz={tz} />}
           {active === 'mis-pronos' && <MisPronosContent user={user} tz={tz} />}
