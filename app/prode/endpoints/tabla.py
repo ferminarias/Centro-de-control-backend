@@ -20,6 +20,7 @@ def get_tabla(
             ProdeUser.id,
             ProdeUser.nombre,
             ProdeUser.apellido,
+            ProdeUser.avatar_url,
             func.coalesce(func.sum(ProdePrediccion.puntos), 0).label("puntos"),
             func.count(ProdePrediccion.id).label("predicciones"),
             func.sum(
@@ -31,7 +32,7 @@ def get_tabla(
         )
         .outerjoin(ProdePrediccion, ProdePrediccion.user_id == ProdeUser.id)
         .filter(ProdeUser.activo.is_(True))
-        .group_by(ProdeUser.id, ProdeUser.nombre, ProdeUser.apellido)
+        .group_by(ProdeUser.id, ProdeUser.nombre, ProdeUser.apellido, ProdeUser.avatar_url)
         .order_by(
             func.coalesce(func.sum(ProdePrediccion.puntos), 0).desc(),
             func.sum(case((ProdePrediccion.puntos == 3, 1), else_=0)).desc(),
@@ -45,6 +46,7 @@ def get_tabla(
             user_id=str(row.id),
             nombre=row.nombre,
             apellido=row.apellido,
+            avatar_url=row.avatar_url,
             puntos=int(row.puntos or 0),
             exactos=int(row.exactos or 0),
             resultados=int(row.resultados or 0),

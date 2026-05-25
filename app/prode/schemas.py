@@ -119,6 +119,7 @@ class TablaEntry(BaseModel):
     user_id: str
     nombre: str
     apellido: str
+    avatar_url: Optional[str] = None
     puntos: int
     exactos: int
     resultados: int

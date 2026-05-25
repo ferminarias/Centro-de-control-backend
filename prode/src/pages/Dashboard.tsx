@@ -50,6 +50,7 @@ interface TablaEntry {
   user_id: string
   nombre: string
   apellido: string
+  avatar_url: string | null
   puntos: number
   exactos: number
   resultados: number
@@ -1056,8 +1057,11 @@ function TablaContent({ user }: { user: ProdeUser }) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-[11px] font-semibold text-content-secondary shrink-0">
-                        {entry.nombre[0]}{entry.apellido[0]}
+                      <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-[11px] font-semibold text-content-secondary shrink-0 overflow-hidden">
+                        {entry.avatar_url
+                          ? <img src={entry.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          : <>{entry.nombre[0]}{entry.apellido[0]}</>
+                        }
                       </div>
                       <div>
                         <p className={`font-medium leading-tight ${isMe ? 'text-accent' : 'text-content-primary'}`}>
