@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -5,6 +7,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 # from app.api.v1.router import api_router  # CRM desactivado temporalmente
 from app.prode.router import prode_router
+from app.prode.scheduler import start_scheduler, stop_scheduler
 from app.core.audit_middleware import AuditMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine
@@ -37,10 +40,18 @@ run_startup_checks(engine)
 # Application factory
 # ─────────────────────────────────────────────────────────────────────────────
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+
 app = FastAPI(
     title="Prode Mundial 2026 - Grupo Nods",
     description="Backend del Prode Mundial 2026.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Rate limiting
