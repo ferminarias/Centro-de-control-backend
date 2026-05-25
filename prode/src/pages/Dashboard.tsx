@@ -92,13 +92,6 @@ function formatFecha(iso: string) {
   }
 }
 
-function resultadoLabel(partido: Partido): string {
-  if (partido.estado !== 'finalizado') return ''
-  const l = partido.goles_local ?? 0
-  const v = partido.goles_visitante ?? 0
-  return `${l} - ${v}`
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -346,7 +339,7 @@ function PartidoCardCompact({ partido }: { partido: Partido }) {
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
-function FixtureContent({ user }: { user: ProdeUser }) {
+function FixtureContent(_: { user: ProdeUser }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [loading, setLoading] = useState(true)
   const [grupoActivo, setGrupoActivo] = useState<string | 'eliminatorias'>('A')
@@ -618,7 +611,7 @@ function ScoreInput({ value, onChange, disabled }: { value: number; onChange: (v
 
 // ── Mis Pronósticos ───────────────────────────────────────────────────────────
 
-function MisPronosContent({ user }: { user: ProdeUser }) {
+function MisPronosContent(_: { user: ProdeUser }) {
   const [preds, setPreds] = useState<(Prediccion & { partido: Partido })[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<'todos' | 'pendientes' | 'jugados'>('todos')
@@ -631,7 +624,6 @@ function MisPronosContent({ user }: { user: ProdeUser }) {
       .finally(() => setLoading(false))
   }, [])
 
-  const ahora = new Date()
   const filtrados = preds.filter(p => {
     if (filtro === 'pendientes') return p.partido.estado !== 'finalizado'
     if (filtro === 'jugados') return p.partido.estado === 'finalizado'
