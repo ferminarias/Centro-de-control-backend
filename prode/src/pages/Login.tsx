@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGoogleLogin } from '@react-oauth/google'
 
+const GOOGLE_ENABLED = !!import.meta.env.VITE_GOOGLE_CLIENT_ID
+
 export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -88,26 +90,26 @@ export default function Login() {
           </div>
 
           <div className="flex flex-col gap-4">
-            {/* Google button */}
-            <button
-              onClick={() => googleLogin()}
-              disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-semibold text-sm py-3 px-4 rounded-xl border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {googleLoading ? (
-                <SpinnerIcon dark />
-              ) : (
-                <GoogleIcon />
-              )}
-              {googleLoading ? 'Conectando...' : 'Continuar con Google'}
-            </button>
+            {GOOGLE_ENABLED && (
+              <>
+                {/* Google button */}
+                <button
+                  onClick={() => googleLogin()}
+                  disabled={googleLoading}
+                  className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 text-gray-800 font-semibold text-sm py-3 px-4 rounded-xl border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {googleLoading ? <SpinnerIcon dark /> : <GoogleIcon />}
+                  {googleLoading ? 'Conectando...' : 'Continuar con Google'}
+                </button>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-[11px] text-content-muted">o</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-[11px] text-content-muted">o</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              </>
+            )}
 
             {/* Email form — collapsed by default */}
             {!showEmailForm ? (
