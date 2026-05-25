@@ -11,30 +11,6 @@ export default function Login() {
   const [error, setError] = useState('')
   const [showEmailForm, setShowEmailForm] = useState(false)
 
-  async function handleGoogleSuccess(credentialResponse: { credential?: string }) {
-    if (!credentialResponse.credential) return
-    setGoogleLoading(true)
-    setError('')
-    try {
-      const res = await fetch('/api/prode/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: credentialResponse.credential }),
-      })
-      if (!res.ok) {
-        const d = await res.json()
-        throw new Error(d.detail || 'Error al iniciar sesión con Google')
-      }
-      const data = await res.json()
-      localStorage.setItem('prode_token', data.access_token)
-      navigate(data.user.must_change_password ? '/change-password' : '/dashboard')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error con Google')
-    } finally {
-      setGoogleLoading(false)
-    }
-  }
-
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       // useGoogleLogin with flow='implicit' returns access_token, not credential
@@ -42,11 +18,6 @@ export default function Login() {
       setGoogleLoading(true)
       setError('')
       try {
-        const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        }).then(r => r.json())
-
-        // Exchange with our backend using the access token as credential bearer
         const res = await fetch('/api/prode/auth/google-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
