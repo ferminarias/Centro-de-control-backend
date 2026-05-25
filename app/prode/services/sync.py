@@ -39,45 +39,67 @@ STATUS_MAP = {
     "CANCELLED": "programado",
 }
 
-# Maps all known API name variants → our stored nombre_api (lowercase)
+# FIFA WC 2026 TLA (3-letter code) → ISO 3166-1 alpha-2 (for flags)
+TLA_TO_ISO: dict[str, str] = {
+    "MEX": "MX", "RSA": "ZA", "KOR": "KR", "CZE": "CZ",
+    "CAN": "CA", "BIH": "BA", "QAT": "QA", "SUI": "CH",
+    "BRA": "BR", "MAR": "MA", "HAI": "HT", "SCO": "GB",
+    "USA": "US", "PAR": "PY", "AUS": "AU", "TUR": "TR",
+    "GER": "DE", "CUW": "CW", "CIV": "CI", "ECU": "EC",
+    "NED": "NL", "JPN": "JP", "SWE": "SE", "TUN": "TN",
+    "BEL": "BE", "EGY": "EG", "IRN": "IR", "NZL": "NZ",
+    "ESP": "ES", "CPV": "CV", "KSA": "SA", "URU": "UY",
+    "FRA": "FR", "SEN": "SN", "IRQ": "IQ", "NOR": "NO",
+    "ARG": "AR", "ALG": "DZ", "AUT": "AT", "JOR": "JO",
+    "POR": "PT", "COD": "CD", "UZB": "UZ", "COL": "CO",
+    "ENG": "GB", "CRO": "HR", "GHA": "GH", "PAN": "PA",
+}
+
+# TLA → Spanish name (for auto-created teams)
+TLA_TO_NOMBRE: dict[str, str] = {
+    "MEX": "México", "RSA": "Sudáfrica", "KOR": "Corea del Sur", "CZE": "República Checa",
+    "CAN": "Canadá", "BIH": "Bosnia y Herzegovina", "QAT": "Qatar", "SUI": "Suiza",
+    "BRA": "Brasil", "MAR": "Marruecos", "HAI": "Haití", "SCO": "Escocia",
+    "USA": "Estados Unidos", "PAR": "Paraguay", "AUS": "Australia", "TUR": "Turquía",
+    "GER": "Alemania", "CUW": "Curazao", "CIV": "Costa de Marfil", "ECU": "Ecuador",
+    "NED": "Países Bajos", "JPN": "Japón", "SWE": "Suecia", "TUN": "Túnez",
+    "BEL": "Bélgica", "EGY": "Egipto", "IRN": "Irán", "NZL": "Nueva Zelanda",
+    "ESP": "España", "CPV": "Cabo Verde", "KSA": "Arabia Saudita", "URU": "Uruguay",
+    "FRA": "Francia", "SEN": "Senegal", "IRQ": "Irak", "NOR": "Noruega",
+    "ARG": "Argentina", "ALG": "Argelia", "AUT": "Austria", "JOR": "Jordania",
+    "POR": "Portugal", "COD": "Congo DR", "UZB": "Uzbekistán", "COL": "Colombia",
+    "ENG": "Inglaterra", "CRO": "Croacia", "GHA": "Ghana", "PAN": "Panamá",
+}
+
+# All known API name variants → our stored nombre_api (lowercase)
 API_NAME_NORMALIZE: dict[str, str] = {
-    # Ivory Coast
     "côte d'ivoire": "ivory coast",
     "cote d'ivoire": "ivory coast",
-    "côte d'ivoire": "ivory coast",
-    # Turkey
     "turkey": "türkiye",
-    # DR Congo
     "dr congo": "dr congo",
     "congo dr": "dr congo",
     "democratic republic of the congo": "dr congo",
     "democratic republic of congo": "dr congo",
-    "congo, the democratic republic of the": "dr congo",
-    # Korea
     "south korea": "korea republic",
     "republic of korea": "korea republic",
-    # Czechia
     "czech republic": "czechia",
-    # USA
     "united states of america": "united states",
     "usa": "united states",
-    # Curacao variants (with/without accent)
     "curacao": "curaçao",
-    # Cape Verde
     "cabo verde": "cape verde",
-    # Saudi Arabia
     "ksa": "saudi arabia",
-    # New Zealand
-    "new zealand": "new zealand",
+    "england": "england",
+    "scotland": "scotland",
+    "iran": "iran",
+    "iraq": "iraq",
 }
 
-# Server-side live data cache (per-process, avoids hammering API rate limits)
+# Server-side live data cache
 _live_cache: dict = {"ts": 0.0, "matches": []}
-LIVE_CACHE_TTL = 55  # seconds (under 1-minute rate limit window)
+LIVE_CACHE_TTL = 55
 
 
 def _normalize_api_name(raw: str) -> str:
-    """Normalize an API team name to match our stored nombre_api."""
     clean = raw.strip().lower()
     return API_NAME_NORMALIZE.get(clean, clean)
 
@@ -95,21 +117,18 @@ def _resolve_team(
     equipos_by_api_id: dict,
     equipos_by_name: dict,
     db: Session,
+    group_letter: Optional[str] = None,
 ) -> Optional[ProdeEquipo]:
     api_id = api_team.get("id")
+    tla = (api_team.get("tla") or "").strip().upper()
 
-    # 1. Exact API id match (fastest)
+    # 1. Fast path: already have this api_id
     if api_id and api_id in equipos_by_api_id:
         return equipos_by_api_id[api_id]
 
-    # 2. Try all name variants the API provides
-    candidates = [
-        api_team.get("name", ""),
-        api_team.get("shortName", ""),
-        api_team.get("tla", ""),
-    ]
+    # 2. Try all name variants
     equipo: Optional[ProdeEquipo] = None
-    for raw in candidates:
+    for raw in [api_team.get("name", ""), api_team.get("shortName", ""), tla]:
         if not raw:
             continue
         normalized = _normalize_api_name(raw)
@@ -117,7 +136,28 @@ def _resolve_team(
         if equipo:
             break
 
-    # 3. Store api_id for faster future lookups
+    # 3. Auto-create team from API data using TLA → ISO/nombre mapping
+    if equipo is None and api_id:
+        iso = TLA_TO_ISO.get(tla, "UN")
+        nombre = TLA_TO_NOMBRE.get(tla) or api_team.get("shortName") or api_team.get("name") or f"Equipo {api_id}"
+        nombre_api = api_team.get("name") or nombre
+        logger.warning(
+            "Team not found in DB: id=%s name='%s' tla='%s' → auto-creating as '%s' (ISO: %s)",
+            api_id, api_team.get("name"), tla, nombre, iso,
+        )
+        equipo = ProdeEquipo(
+            nombre=nombre,
+            nombre_api=nombre_api,
+            codigo_iso=iso,
+            grupo=group_letter or "?",
+            api_id=api_id,
+        )
+        db.add(equipo)
+        db.flush()
+        equipos_by_api_id[api_id] = equipo
+        equipos_by_name[nombre_api.lower()] = equipo
+
+    # 4. Persist api_id if matched by name
     if equipo and api_id and not equipo.api_id:
         equipo.api_id = api_id
         equipos_by_api_id[api_id] = equipo
@@ -126,18 +166,13 @@ def _resolve_team(
 
 
 def _parse_match(m: dict, equipos_by_api_id: dict, equipos_by_name: dict, db: Session) -> Optional[dict]:
-    """Parse a raw API match dict into a structured dict for DB upsert."""
     api_id = m.get("id")
     raw_date = m.get("utcDate")
     if not api_id or not raw_date:
         return None
 
-    home = _resolve_team(m.get("homeTeam", {}), equipos_by_api_id, equipos_by_name, db)
-    away = _resolve_team(m.get("awayTeam", {}), equipos_by_api_id, equipos_by_name, db)
-
-    fecha = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
-    fase = STAGE_MAP.get(m.get("stage", "GROUP_STAGE"), "grupo")
-
+    stage_raw = m.get("stage", "GROUP_STAGE")
+    fase = STAGE_MAP.get(stage_raw, "grupo")
     group_raw = m.get("group") or ""
     group_letter: Optional[str] = None
     if group_raw.startswith("GROUP_"):
@@ -145,17 +180,17 @@ def _parse_match(m: dict, equipos_by_api_id: dict, equipos_by_name: dict, db: Se
         if len(letter) == 1 and letter.isalpha():
             group_letter = letter
 
+    home = _resolve_team(m.get("homeTeam", {}), equipos_by_api_id, equipos_by_name, db, group_letter)
+    away = _resolve_team(m.get("awayTeam", {}), equipos_by_api_id, equipos_by_name, db, group_letter)
+
+    fecha = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
     api_status = m.get("status", "SCHEDULED")
     estado = STATUS_MAP.get(api_status, "programado")
-    # PAUSED = halftime, keep as en_juego but flag it
-    is_ht = api_status == "PAUSED"
 
     score = m.get("score", {}) or {}
     ft = score.get("fullTime", {}) or {}
-    ht = score.get("halfTime", {}) or {}
     goles_local = ft.get("home")
     goles_visitante = ft.get("away")
-    # During the game, fullTime scores are null — use regular score object
     if goles_local is None and api_status == "IN_PLAY":
         reg = score.get("regularTime", {}) or {}
         goles_local = reg.get("home")
@@ -173,18 +208,15 @@ def _parse_match(m: dict, equipos_by_api_id: dict, equipos_by_name: dict, db: Se
         "goles_local": goles_local,
         "goles_visitante": goles_visitante,
         "estado": estado,
-        "is_ht": is_ht,
     }
 
 
 def _upsert_partido(db: Session, parsed: dict, recalc_points: bool = True) -> tuple[str, int]:
-    """Insert or update a match. Returns ('created'|'updated', points_recalced)."""
     partido = db.query(ProdePartido).filter(ProdePartido.api_id == parsed["api_id"]).first()
     pts_updated = 0
 
     if partido is None:
-        home = parsed["home"]
-        away = parsed["away"]
+        home, away = parsed["home"], parsed["away"]
         partido = ProdePartido(
             api_id=parsed["api_id"],
             equipo_local_id=home.id if home else None,
@@ -235,7 +267,6 @@ def _upsert_partido(db: Session, parsed: dict, recalc_points: bool = True) -> tu
 
 
 def sync_wc_fixtures(db: Session, api_key: str) -> dict:
-    """Full sync: all WC 2026 matches."""
     with httpx.Client(timeout=30.0) as client:
         resp = client.get(
             f"{FOOTBALL_DATA_URL}/competitions/WC/matches",
@@ -252,11 +283,16 @@ def sync_wc_fixtures(db: Session, api_key: str) -> dict:
     equipos_by_name = {e.nombre_api.lower(): e for e in all_equipos}
 
     created = updated = points_updated = 0
+    unmatched_teams: set[str] = set()
 
     for m in matches:
         parsed = _parse_match(m, equipos_by_api_id, equipos_by_name, db)
         if not parsed:
             continue
+        if parsed["home"] is None:
+            unmatched_teams.add(m.get("homeTeam", {}).get("name", "?"))
+        if parsed["away"] is None:
+            unmatched_teams.add(m.get("awayTeam", {}).get("name", "?"))
         action, pts = _upsert_partido(db, parsed)
         if action == "created":
             created += 1
@@ -266,16 +302,20 @@ def sync_wc_fixtures(db: Session, api_key: str) -> dict:
 
     db.commit()
 
-    return {
+    result: dict = {
         "partidos_creados": created,
         "partidos_actualizados": updated,
         "predicciones_puntuadas": points_updated,
         "total_partidos_api": len(matches),
     }
+    if unmatched_teams:
+        result["equipos_sin_match"] = list(unmatched_teams)
+        logger.warning("Unmatched teams after sync: %s", unmatched_teams)
+
+    return result
 
 
 def get_live_matches_from_api(api_key: str) -> list[dict]:
-    """Fetch IN_PLAY matches with 55-second server cache."""
     now = time.time()
     if now - _live_cache["ts"] < LIVE_CACHE_TTL:
         return _live_cache["matches"]
@@ -299,9 +339,7 @@ def get_live_matches_from_api(api_key: str) -> list[dict]:
 
 
 def sync_live_matches(db: Session, api_key: str) -> dict:
-    """Sync only currently live matches (uses server cache)."""
     matches = get_live_matches_from_api(api_key)
-
     if not matches:
         return {"en_juego": 0, "actualizados": 0}
 
@@ -332,12 +370,12 @@ def apply_resultado_manual(
     partido.estado = "finalizado"
 
     preds = db.query(ProdePrediccion).filter(ProdePrediccion.partido_id == partido.id).all()
-    points_updated = 0
+    pts = 0
     for pred in preds:
         pred.puntos = calculate_points(
             pred.goles_local, pred.goles_visitante, goles_local, goles_visitante
         )
-        points_updated += 1
+        pts += 1
 
     db.commit()
-    return points_updated
+    return pts

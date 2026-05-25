@@ -1,12 +1,13 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.prode.auth import get_current_prode_user, hash_password
-from app.prode.models import ProdePartido, ProdeUser
+from app.prode.models import ProdeEquipo, ProdePartido, ProdeUser
 from app.prode.schemas import (
     ProdeCreateUserRequest,
     ProdeUpdateUserRequest,
@@ -154,6 +155,36 @@ def sync_fixtures(db: Session = Depends(get_db)) -> dict:
             detail=f"Error al sincronizar: {e}",
         )
     return result
+
+
+@router.get(
+    "/admin/diagnostico",
+    summary="Estado del DB: equipos, partidos y partidos sin equipos asignados",
+    dependencies=[Depends(_require_admin)],
+)
+def diagnostico(db: Session = Depends(get_db)) -> dict:
+    total_equipos = db.query(func.count(ProdeEquipo.id)).scalar()
+    total_partidos = db.query(func.count(ProdePartido.id)).scalar()
+    sin_local = db.query(func.count(ProdePartido.id)).filter(ProdePartido.equipo_local_id.is_(None)).scalar()
+    sin_visitante = db.query(func.count(ProdePartido.id)).filter(ProdePartido.equipo_visitante_id.is_(None)).scalar()
+
+    sample_equipos = (
+        db.query(ProdeEquipo.nombre, ProdeEquipo.nombre_api, ProdeEquipo.codigo_iso, ProdeEquipo.api_id)
+        .order_by(ProdeEquipo.id)
+        .limit(10)
+        .all()
+    )
+
+    return {
+        "total_equipos": total_equipos,
+        "total_partidos": total_partidos,
+        "partidos_sin_equipo_local": sin_local,
+        "partidos_sin_equipo_visitante": sin_visitante,
+        "sample_equipos": [
+            {"nombre": e.nombre, "nombre_api": e.nombre_api, "codigo_iso": e.codigo_iso, "api_id": e.api_id}
+            for e in sample_equipos
+        ],
+    }
 
 
 @router.patch(
