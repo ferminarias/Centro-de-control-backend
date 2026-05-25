@@ -241,12 +241,19 @@ function HomeContent({ user, onNavigate }: { user: ProdeUser; onNavigate: (id: s
   const token = localStorage.getItem('prode_token')
   const headers = { Authorization: `Bearer ${token}` }
 
-  useEffect(() => {
+  const fetchAll = useCallback(() => {
     fetch('/api/prode/partidos', { headers }).then(r => r.json()).then(setPartidos).catch(() => {})
     fetch('/api/prode/tabla', { headers }).then(r => r.json()).then(setTabla).catch(() => {})
-  }, [])
+  }, [token])
+
+  useEffect(() => {
+    fetchAll()
+    const id = setInterval(fetchAll, 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [fetchAll])
 
   const ahora = new Date()
+  const enVivo = partidos.filter(p => p.estado === 'en_juego')
   const proximos = partidos
     .filter(p => p.estado === 'programado' && new Date(p.fecha) > ahora)
     .slice(0, 3)
@@ -261,6 +268,19 @@ function HomeContent({ user, onNavigate }: { user: ProdeUser; onNavigate: (id: s
         <h1 className="text-xl font-semibold text-content-primary">Hola, {user.nombre}</h1>
         <p className="text-sm text-content-secondary mt-0.5">Mundial 2026 · USA / México / Canadá</p>
       </div>
+
+      {/* En Vivo — sección prominente */}
+      {enVivo.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <p className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">En Vivo ahora</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            {enVivo.map(p => <LiveMatchCard key={p.id} partido={p} />)}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -299,6 +319,99 @@ function HomeContent({ user, onNavigate }: { user: ProdeUser; onNavigate: (id: s
           <p className="text-content-muted text-xs mt-1">El administrador debe sincronizar los partidos.</p>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Live Match Card ───────────────────────────────────────────────────────────
+
+function LiveMatchCard({ partido }: { partido: Partido }) {
+  const minuto = useLiveMinute(partido.fecha, partido.estado)
+  const pred = partido.mi_prediccion
+
+  const glReal = partido.goles_local ?? 0
+  const gvReal = partido.goles_visitante ?? 0
+
+  // Live prediction status
+  let predStatus: { label: string; color: string } | null = null
+  if (pred) {
+    const signReal = Math.sign(glReal - gvReal)
+    const signPred = Math.sign(pred.goles_local - pred.goles_visitante)
+    const esExacto = pred.goles_local === glReal && pred.goles_visitante === gvReal
+    if (esExacto) {
+      predStatus = { label: 'vas exacto', color: 'text-emerald-400' }
+    } else if (signReal === signPred) {
+      predStatus = { label: 'vas por el resultado', color: 'text-amber-400' }
+    } else {
+      predStatus = { label: 'no va de momento', color: 'text-red-400' }
+    }
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-emerald-500/30 bg-bg-surface">
+      {/* Subtle green glow line at top */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/60 to-transparent" />
+
+      <div className="px-5 py-4">
+        {/* Header: LIVE + minuto */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+            </span>
+            <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">En Vivo</span>
+          </div>
+          {minuto && (
+            <span className="text-xs font-semibold text-content-muted tabular-nums bg-bg-elevated px-2 py-0.5 rounded-full">
+              {minuto}
+            </span>
+          )}
+        </div>
+
+        {/* Teams + Score */}
+        <div className="flex items-center gap-3">
+          {/* Local */}
+          <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+            <Flag codigo={partido.equipo_local?.codigo_iso ?? ''} className="w-10 rounded-md shadow-sm" />
+            <span className="text-xs text-content-secondary font-medium text-center leading-tight truncate w-full text-center">
+              {partido.equipo_local?.nombre ?? '?'}
+            </span>
+          </div>
+
+          {/* Score */}
+          <div className="flex flex-col items-center gap-1 shrink-0 px-2">
+            <div className="flex items-center gap-3">
+              <span className="text-4xl font-bold text-amber-400 tabular-nums leading-none">{glReal}</span>
+              <span className="text-xl font-light text-content-muted">—</span>
+              <span className="text-4xl font-bold text-amber-400 tabular-nums leading-none">{gvReal}</span>
+            </div>
+            {pred && (
+              <div className="flex flex-col items-center gap-0.5 mt-1">
+                <span className="text-[10px] text-content-muted">
+                  tu pronós: <span className="font-semibold text-content-secondary">{pred.goles_local}-{pred.goles_visitante}</span>
+                </span>
+                {predStatus && (
+                  <span className={`text-[10px] font-semibold ${predStatus.color}`}>
+                    {predStatus.label}
+                  </span>
+                )}
+              </div>
+            )}
+            {!pred && (
+              <span className="text-[10px] text-content-muted mt-1">sin pronóstico</span>
+            )}
+          </div>
+
+          {/* Visitante */}
+          <div className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+            <Flag codigo={partido.equipo_visitante?.codigo_iso ?? ''} className="w-10 rounded-md shadow-sm" />
+            <span className="text-xs text-content-secondary font-medium text-center leading-tight truncate w-full text-center">
+              {partido.equipo_visitante?.nombre ?? '?'}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -363,34 +476,12 @@ function FixtureContent(_: { user: ProdeUser }) {
     }
   }, [token])
 
-  // Refresh live match data every 30 seconds when any match is en_juego
+  // Auto-refresh every 5 minutes — backend auto-sync keeps DB fresh
   useEffect(() => {
     fetchPartidos()
+    const id = setInterval(fetchPartidos, 5 * 60 * 1000)
+    return () => clearInterval(id)
   }, [fetchPartidos])
-
-  useEffect(() => {
-    const hayEnVivo = partidos.some(p => p.estado === 'en_juego')
-    if (!hayEnVivo) return
-    const interval = setInterval(async () => {
-      try {
-        // Lightweight live endpoint (server-cached, won't hammer API)
-        const res = await fetch('/api/prode/partidos/live', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) return
-        const live: Partido[] = await res.json()
-        if (live.length > 0) {
-          setPartidos(prev =>
-            prev.map(p => {
-              const updated = live.find(l => l.id === p.id)
-              return updated ? { ...p, ...updated } : p
-            })
-          )
-        }
-      } catch { /* ignore */ }
-    }, 30_000)
-    return () => clearInterval(interval)
-  }, [partidos, token])
 
   async function savePred(partidoId: number, gl: number, gv: number) {
     const res = await fetch('/api/prode/predicciones', {
@@ -618,13 +709,15 @@ function PartidoRow({ partido, onSave }: { partido: Partido; onSave: (id: number
           </>
         ) : partido.estado === 'en_juego' ? (
           <>
-            <p className="text-lg font-bold text-status-draw tabular-nums leading-none">
-              {partido.goles_local ?? 0} - {partido.goles_visitante ?? 0}
+            <p className="text-xl font-bold text-amber-400 tabular-nums leading-none">
+              {partido.goles_local ?? 0} — {partido.goles_visitante ?? 0}
             </p>
-            {yaPronosticado && (
-              <p className="text-[11px] text-content-muted">
-                tu pronós: {partido.mi_prediccion!.goles_local}-{partido.mi_prediccion!.goles_visitante}
+            {yaPronosticado ? (
+              <p className="text-[10px] text-content-muted leading-tight text-center">
+                pronós: <span className="font-semibold text-content-secondary">{partido.mi_prediccion!.goles_local}-{partido.mi_prediccion!.goles_visitante}</span>
               </p>
+            ) : (
+              <p className="text-[10px] text-content-muted">sin pronós.</p>
             )}
           </>
         ) : yaPronosticado ? (
