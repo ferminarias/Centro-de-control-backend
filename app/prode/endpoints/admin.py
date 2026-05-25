@@ -6,12 +6,15 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.prode.auth import get_current_prode_user, hash_password
-from app.prode.models import ProdeUser
+from app.prode.models import ProdePartido, ProdeUser
 from app.prode.schemas import (
     ProdeCreateUserRequest,
     ProdeUpdateUserRequest,
     ProdeUserResponse,
+    ResultadoManualRequest,
+    SyncResponse,
 )
+from app.prode.services.sync import apply_resultado_manual, sync_wc_fixtures
 
 router = APIRouter(tags=["Prode - Admin"])
 
@@ -26,6 +29,8 @@ def _require_admin(current_user: ProdeUser = Depends(get_current_prode_user)) ->
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Se requieren permisos de administrador")
     return current_user
 
+
+# ── Users CRUD ────────────────────────────────────────────────────────────────
 
 @router.post(
     "/admin/users",
@@ -124,3 +129,48 @@ def delete_prode_user(user_id: uuid.UUID, db: Session = Depends(get_db)) -> None
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
     db.delete(user)
     db.commit()
+
+
+# ── Sync & Results ────────────────────────────────────────────────────────────
+
+@router.post(
+    "/admin/sync",
+    response_model=SyncResponse,
+    summary="Sincronizar fixture y resultados desde football-data.org",
+    dependencies=[Depends(_require_admin)],
+)
+def sync_fixtures(db: Session = Depends(get_db)) -> dict:
+    api_key = settings.FOOTBALL_DATA_API_KEY if hasattr(settings, "FOOTBALL_DATA_API_KEY") else None
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="FOOTBALL_DATA_API_KEY no configurada",
+        )
+    try:
+        result = sync_wc_fixtures(db, api_key)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Error al sincronizar: {e}",
+        )
+    return result
+
+
+@router.patch(
+    "/admin/partidos/{partido_id}/resultado",
+    summary="Ingresar resultado manual de un partido",
+    dependencies=[Depends(_require_admin)],
+)
+def set_resultado_manual(
+    partido_id: int,
+    body: ResultadoManualRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    partido = db.query(ProdePartido).filter(ProdePartido.id == partido_id).first()
+    if not partido:
+        raise HTTPException(status_code=404, detail="Partido no encontrado")
+    if body.goles_local < 0 or body.goles_visitante < 0:
+        raise HTTPException(status_code=422, detail="Los goles no pueden ser negativos")
+
+    pts_updated = apply_resultado_manual(db, partido, body.goles_local, body.goles_visitante)
+    return {"predicciones_puntuadas": pts_updated}

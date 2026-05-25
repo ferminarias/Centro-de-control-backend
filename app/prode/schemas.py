@@ -48,3 +48,91 @@ class ProdeUpdateUserRequest(BaseModel):
 class ProdeChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+# ── Equipos ───────────────────────────────────────────────────────────────────
+
+class EquipoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre: str
+    codigo_iso: str
+    grupo: str
+
+
+# ── Partidos ──────────────────────────────────────────────────────────────────
+
+class PrediccionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    partido_id: int
+    goles_local: int
+    goles_visitante: int
+    puntos: Optional[int]
+    updated_at: datetime
+
+
+class PartidoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    equipo_local: Optional[EquipoResponse]
+    equipo_visitante: Optional[EquipoResponse]
+    fecha: datetime
+    estadio: Optional[str]
+    fase: str
+    grupo: Optional[str]
+    jornada: Optional[int]
+    goles_local: Optional[int]
+    goles_visitante: Optional[int]
+    estado: str
+    mi_prediccion: Optional[PrediccionResponse] = None
+
+
+# ── Predicciones ──────────────────────────────────────────────────────────────
+
+class PrediccionRequest(BaseModel):
+    partido_id: int
+    goles_local: int
+    goles_visitante: int
+
+
+class PrediccionConPartidoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    partido_id: int
+    goles_local: int
+    goles_visitante: int
+    puntos: Optional[int]
+    updated_at: datetime
+    partido: PartidoResponse
+
+
+# ── Tabla ─────────────────────────────────────────────────────────────────────
+
+class TablaEntry(BaseModel):
+    posicion: int
+    user_id: str
+    nombre: str
+    apellido: str
+    puntos: int
+    exactos: int
+    resultados: int
+    predicciones: int
+
+
+# ── Sync ──────────────────────────────────────────────────────────────────────
+
+class SyncResponse(BaseModel):
+    partidos_creados: int
+    partidos_actualizados: int
+    predicciones_puntuadas: int
+    total_partidos_api: int
+
+
+class ResultadoManualRequest(BaseModel):
+    goles_local: int
+    goles_visitante: int

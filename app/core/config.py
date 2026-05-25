@@ -8,6 +8,7 @@ _MIN_SECRET_KEY_LENGTH = 32
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://centro:centro_pass@db:5432/centro_control"
     ADMIN_API_KEY: str = ""
+    FOOTBALL_DATA_API_KEY: str = ""
     SECRET_KEY: str = _WEAK_SECRET_KEY
     ENVIRONMENT: str = "development"
     PORT: int = 8000

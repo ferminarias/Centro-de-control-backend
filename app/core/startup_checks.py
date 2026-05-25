@@ -285,6 +285,140 @@ def _check_prode_users_table(conn) -> None:
             logger.warning("Startup check: added column prode_users.%s", col)
 
 
+_EQUIPOS_WC2026 = [
+    # Grupo A
+    ("México", "Mexico", "MX", "A"),
+    ("Sudáfrica", "South Africa", "ZA", "A"),
+    ("Corea del Sur", "Korea Republic", "KR", "A"),
+    ("República Checa", "Czechia", "CZ", "A"),
+    # Grupo B
+    ("Canadá", "Canada", "CA", "B"),
+    ("Bosnia y Herzegovina", "Bosnia and Herzegovina", "BA", "B"),
+    ("Qatar", "Qatar", "QA", "B"),
+    ("Suiza", "Switzerland", "CH", "B"),
+    # Grupo C
+    ("Brasil", "Brazil", "BR", "C"),
+    ("Marruecos", "Morocco", "MA", "C"),
+    ("Haití", "Haiti", "HT", "C"),
+    ("Escocia", "Scotland", "GB", "C"),
+    # Grupo D
+    ("Estados Unidos", "United States", "US", "D"),
+    ("Paraguay", "Paraguay", "PY", "D"),
+    ("Australia", "Australia", "AU", "D"),
+    ("Turquía", "Türkiye", "TR", "D"),
+    # Grupo E
+    ("Alemania", "Germany", "DE", "E"),
+    ("Curazao", "Curaçao", "CW", "E"),
+    ("Costa de Marfil", "Ivory Coast", "CI", "E"),
+    ("Ecuador", "Ecuador", "EC", "E"),
+    # Grupo F
+    ("Países Bajos", "Netherlands", "NL", "F"),
+    ("Japón", "Japan", "JP", "F"),
+    ("Suecia", "Sweden", "SE", "F"),
+    ("Túnez", "Tunisia", "TN", "F"),
+    # Grupo G
+    ("Bélgica", "Belgium", "BE", "G"),
+    ("Egipto", "Egypt", "EG", "G"),
+    ("Irán", "Iran", "IR", "G"),
+    ("Nueva Zelanda", "New Zealand", "NZ", "G"),
+    # Grupo H
+    ("España", "Spain", "ES", "H"),
+    ("Cabo Verde", "Cape Verde", "CV", "H"),
+    ("Arabia Saudita", "Saudi Arabia", "SA", "H"),
+    ("Uruguay", "Uruguay", "UY", "H"),
+    # Grupo I
+    ("Francia", "France", "FR", "I"),
+    ("Senegal", "Senegal", "SN", "I"),
+    ("Irak", "Iraq", "IQ", "I"),
+    ("Noruega", "Norway", "NO", "I"),
+    # Grupo J
+    ("Argentina", "Argentina", "AR", "J"),
+    ("Argelia", "Algeria", "DZ", "J"),
+    ("Austria", "Austria", "AT", "J"),
+    ("Jordania", "Jordan", "JO", "J"),
+    # Grupo K
+    ("Portugal", "Portugal", "PT", "K"),
+    ("Congo DR", "DR Congo", "CD", "K"),
+    ("Uzbekistán", "Uzbekistan", "UZ", "K"),
+    ("Colombia", "Colombia", "CO", "K"),
+    # Grupo L
+    ("Inglaterra", "England", "GB", "L"),
+    ("Croacia", "Croatia", "HR", "L"),
+    ("Ghana", "Ghana", "GH", "L"),
+    ("Panamá", "Panama", "PA", "L"),
+]
+
+
+def _check_prode_partidos_tables(conn) -> None:
+    if not _table_exists(conn, "prode_equipos"):
+        conn.execute(text("""
+            CREATE TABLE prode_equipos (
+                id SERIAL PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL,
+                nombre_api VARCHAR(100) NOT NULL,
+                codigo_iso VARCHAR(10) NOT NULL,
+                grupo VARCHAR(1) NOT NULL,
+                api_id INTEGER UNIQUE
+            )
+        """))
+        conn.commit()
+        logger.warning("Startup check: created prode_equipos table")
+
+        for nombre, nombre_api, codigo_iso, grupo in _EQUIPOS_WC2026:
+            conn.execute(
+                text(
+                    "INSERT INTO prode_equipos (nombre, nombre_api, codigo_iso, grupo) "
+                    "VALUES (:nombre, :nombre_api, :codigo_iso, :grupo)"
+                ),
+                {"nombre": nombre, "nombre_api": nombre_api, "codigo_iso": codigo_iso, "grupo": grupo},
+            )
+        conn.commit()
+        logger.warning("Startup check: seeded %d equipos", len(_EQUIPOS_WC2026))
+
+    if not _table_exists(conn, "prode_partidos"):
+        conn.execute(text("""
+            CREATE TABLE prode_partidos (
+                id SERIAL PRIMARY KEY,
+                equipo_local_id INTEGER REFERENCES prode_equipos(id),
+                equipo_visitante_id INTEGER REFERENCES prode_equipos(id),
+                fecha TIMESTAMPTZ NOT NULL,
+                estadio VARCHAR(200),
+                fase VARCHAR(20) NOT NULL DEFAULT 'grupo',
+                grupo VARCHAR(1),
+                jornada INTEGER,
+                api_id INTEGER UNIQUE,
+                goles_local INTEGER,
+                goles_visitante INTEGER,
+                estado VARCHAR(20) NOT NULL DEFAULT 'programado'
+            )
+        """))
+        conn.commit()
+        logger.warning("Startup check: created prode_partidos table")
+
+    if not _table_exists(conn, "prode_predicciones"):
+        conn.execute(text("""
+            CREATE TABLE prode_predicciones (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL REFERENCES prode_users(id) ON DELETE CASCADE,
+                partido_id INTEGER NOT NULL REFERENCES prode_partidos(id) ON DELETE CASCADE,
+                goles_local INTEGER NOT NULL,
+                goles_visitante INTEGER NOT NULL,
+                puntos INTEGER,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW(),
+                CONSTRAINT uq_prediccion_user_partido UNIQUE (user_id, partido_id)
+            )
+        """))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_predicciones_user_id ON prode_predicciones (user_id)"
+        ))
+        conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_predicciones_partido_id ON prode_predicciones (partido_id)"
+        ))
+        conn.commit()
+        logger.warning("Startup check: created prode_predicciones table")
+
+
 def run_startup_checks(engine: Engine) -> None:
     """
     Run all schema fallback checks at application startup.
@@ -302,6 +436,7 @@ def run_startup_checks(engine: Engine) -> None:
             _check_accounts_columns(conn)
             _check_campanias_columns(conn)
             _check_prode_users_table(conn)
+            _check_prode_partidos_tables(conn)
         logger.info("Startup schema checks completed")
     except Exception as exc:
         logger.error("Startup schema checks failed: %s", exc)

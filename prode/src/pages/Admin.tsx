@@ -23,6 +23,7 @@ export default function Admin() {
   const [form, setForm] = useState({ nombre: '', apellido: '', email: '', is_admin: false })
   const [actionLoading, setActionLoading] = useState(false)
   const [toast, setToast] = useState('')
+  const [syncing, setSyncing] = useState(false)
 
   const token = localStorage.getItem('prode_token')
 
@@ -103,6 +104,24 @@ export default function Admin() {
     }
   }
 
+  async function syncFixtures() {
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/prode/admin/sync', { method: 'POST', headers: authHeaders })
+      if (!res.ok) {
+        const d = await res.json()
+        showToast(d.detail || 'Error al sincronizar')
+        return
+      }
+      const d = await res.json()
+      showToast(`Sync OK · ${d.partidos_creados} nuevos · ${d.partidos_actualizados} actualizados · ${d.predicciones_puntuadas} pts calculados`)
+    } catch {
+      showToast('Error al conectar con el servidor')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   async function deleteUser() {
     if (!selected) return
     setActionLoading(true)
@@ -139,12 +158,21 @@ export default function Admin() {
             <h1 className="text-xl font-semibold text-content-primary">Usuarios</h1>
             <p className="text-sm text-content-secondary mt-0.5">{users.length} participantes registrados</p>
           </div>
-          <button
-            onClick={() => setModal('create')}
-            className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors"
-          >
-            <IconPlus /> Nuevo usuario
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={syncFixtures}
+              disabled={syncing}
+              className="flex items-center gap-2 bg-bg-surface hover:bg-bg-elevated text-content-secondary text-sm font-semibold px-4 py-2.5 rounded-lg border border-border transition-colors disabled:opacity-50"
+            >
+              <IconSync spinning={syncing} /> {syncing ? 'Sincronizando...' : 'Sync fixture'}
+            </button>
+            <button
+              onClick={() => setModal('create')}
+              className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors"
+            >
+              <IconPlus /> Nuevo usuario
+            </button>
+          </div>
         </div>
 
         {/* Table */}
@@ -332,6 +360,16 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
   )
 }
 
+function IconSync({ spinning }: { spinning: boolean }) {
+  return (
+    <svg
+      width="15" height="15" viewBox="0 0 15 15" fill="none"
+      className={spinning ? 'animate-spin' : ''}
+    >
+      <path d="M13.5 7.5A6 6 0 112.5 4M2.5 1v3h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 function IconBack() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
 }
