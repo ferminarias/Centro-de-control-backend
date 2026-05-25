@@ -638,15 +638,30 @@ function useLiveMinute(fecha: string, estado: string): string {
   return label
 }
 
+const LOCK_MINUTES = 30
+
 function PartidoRow({ partido, onSave }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void }) {
   const { date, time } = formatFecha(partido.fecha)
-  const [gl, setGl] = useState(0)
-  const [gv, setGv] = useState(0)
+  const pred = partido.mi_prediccion
+  const [gl, setGl] = useState(pred?.goles_local ?? 0)
+  const [gv, setGv] = useState(pred?.goles_visitante ?? 0)
+
+  // Sync inputs when prediction changes externally (e.g. after page refresh)
+  useEffect(() => {
+    setGl(pred?.goles_local ?? 0)
+    setGv(pred?.goles_visitante ?? 0)
+  }, [pred?.goles_local, pred?.goles_visitante])
   const [saving, setSaving] = useState(false)
   const ahora = new Date()
-  const cerrado = partido.estado !== 'programado' || new Date(partido.fecha) <= ahora
-  const yaPronosticado = partido.mi_prediccion !== null
+  const kickoff = new Date(partido.fecha)
+  const cutoff = new Date(kickoff.getTime() - LOCK_MINUTES * 60 * 1000)
+  const cerrado = partido.estado !== 'programado' || cutoff <= ahora
+  const yaPronosticado = pred !== null
   const minuto = useLiveMinute(partido.fecha, partido.estado)
+
+  // Minutes until cutoff (only relevant when open and closing soon)
+  const minHastaCierre = Math.floor((cutoff.getTime() - ahora.getTime()) / 60000)
+  const cierraProximo = !cerrado && minHastaCierre <= 60
 
   const puntosColor = partido.mi_prediccion?.puntos === 3
     ? 'text-status-win'
@@ -720,29 +735,38 @@ function PartidoRow({ partido, onSave }: { partido: Partido; onSave: (id: number
               <p className="text-[10px] text-content-muted">sin pronós.</p>
             )}
           </>
-        ) : yaPronosticado ? (
-          // Prediction submitted — locked, immutable
+        ) : cerrado && yaPronosticado ? (
+          // Locked — show prediction, no edit
           <div className="flex flex-col items-center gap-0.5">
             <p className="text-base font-bold text-content-primary tabular-nums leading-none">
-              {partido.mi_prediccion!.goles_local} - {partido.mi_prediccion!.goles_visitante}
+              {pred!.goles_local} - {pred!.goles_visitante}
             </p>
-            <span className="text-[10px] font-semibold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
-              guardado ✓
+            <span className="text-[10px] font-semibold text-content-muted bg-bg-elevated px-2 py-0.5 rounded-full">
+              cerrado ✓
             </span>
           </div>
+        ) : cerrado ? (
+          <span className="text-[11px] text-content-muted">cerrado</span>
         ) : (
-          // Open for prediction
-          <div className="flex items-center gap-1.5">
-            <ScoreInput value={gl} onChange={setGl} disabled={cerrado} />
-            <span className="text-xs text-content-muted font-bold">-</span>
-            <ScoreInput value={gv} onChange={setGv} disabled={cerrado} />
-            <button
-              onClick={handleSave}
-              disabled={saving || cerrado}
-              className="ml-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-40"
-            >
-              {saving ? '...' : 'Guardar'}
-            </button>
+          // Open for prediction or editing
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              <ScoreInput value={gl} onChange={setGl} disabled={false} />
+              <span className="text-xs text-content-muted font-bold">-</span>
+              <ScoreInput value={gv} onChange={setGv} disabled={false} />
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="ml-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-40"
+              >
+                {saving ? '...' : yaPronosticado ? 'Editar' : 'Guardar'}
+              </button>
+            </div>
+            {cierraProximo && (
+              <span className="text-[9px] text-amber-400 font-medium">
+                cierra en {minHastaCierre}min
+              </span>
+            )}
           </div>
         )}
       </div>

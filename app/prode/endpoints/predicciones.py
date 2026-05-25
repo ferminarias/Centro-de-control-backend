@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
@@ -10,9 +10,11 @@ from app.prode.schemas import PrediccionConPartidoResponse, PrediccionRequest, P
 
 router = APIRouter(tags=["Prode - Predicciones"])
 
+LOCK_MINUTES = 30
 
-@router.post("/predicciones", response_model=PrediccionResponse, status_code=status.HTTP_201_CREATED)
-def create_prediccion(
+
+@router.post("/predicciones", response_model=PrediccionResponse, status_code=status.HTTP_200_OK)
+def upsert_prediccion(
     body: PrediccionRequest,
     current_user: ProdeUser = Depends(get_current_prode_user),
     db: Session = Depends(get_db),
@@ -21,15 +23,17 @@ def create_prediccion(
     if not partido:
         raise HTTPException(status_code=404, detail="Partido no encontrado")
 
-    now = datetime.now(timezone.utc)
-    if partido.estado != "programado" or partido.fecha <= now:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="El partido ya comenzó, no se puede enviar un pronóstico",
-        )
-
     if body.goles_local < 0 or body.goles_visitante < 0:
         raise HTTPException(status_code=422, detail="Los goles no pueden ser negativos")
+
+    now = datetime.now(timezone.utc)
+    cutoff = partido.fecha - timedelta(minutes=LOCK_MINUTES)
+
+    if partido.estado != "programado" or cutoff <= now:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Los pronósticos cierran {LOCK_MINUTES} minutos antes del partido",
+        )
 
     existing = (
         db.query(ProdePrediccion)
@@ -39,11 +43,13 @@ def create_prediccion(
         )
         .first()
     )
+
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Ya registraste un pronóstico para este partido",
-        )
+        existing.goles_local = body.goles_local
+        existing.goles_visitante = body.goles_visitante
+        db.commit()
+        db.refresh(existing)
+        return existing
 
     pred = ProdePrediccion(
         user_id=current_user.id,
