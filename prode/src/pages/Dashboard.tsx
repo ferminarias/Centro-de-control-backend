@@ -59,6 +59,14 @@ interface TablaEntry {
 
 const GRUPOS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
 
+const TZ_OPTIONS = [
+  { label: 'Argentina', tz: 'America/Argentina/Buenos_Aires', short: 'ARG' },
+  { label: 'México',    tz: 'America/Mexico_City',            short: 'MEX' },
+  { label: 'Colombia',  tz: 'America/Bogota',                 short: 'COL' },
+  { label: 'Ecuador',   tz: 'America/Guayaquil',              short: 'ECU' },
+]
+const DEFAULT_TZ = 'America/Argentina/Buenos_Aires'
+
 const FASE_LABEL: Record<string, string> = {
   grupo: 'Fase de Grupos',
   r32: 'Ronda de 32',
@@ -84,11 +92,11 @@ function Flag({ codigo, className }: { codigo: string; className?: string }) {
   return <FlagComp className={className ?? 'w-5 rounded-sm'} />
 }
 
-function formatFecha(iso: string) {
+function formatFecha(iso: string, tz: string = DEFAULT_TZ) {
   const d = new Date(iso)
   return {
-    date: d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }),
-    time: d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+    date: d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz }),
+    time: d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: tz }),
   }
 }
 
@@ -99,6 +107,16 @@ export default function Dashboard() {
   const [user, setUser] = useState<ProdeUser | null>(null)
   const [active, setActive] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [tz, setTzState] = useState(() => localStorage.getItem('prode_tz') || DEFAULT_TZ)
+  const [tzOpen, setTzOpen] = useState(false)
+
+  function setTz(newTz: string) {
+    localStorage.setItem('prode_tz', newTz)
+    setTzState(newTz)
+    setTzOpen(false)
+  }
+
+  const tzLabel = TZ_OPTIONS.find(o => o.tz === tz)?.short ?? 'ARG'
 
   useEffect(() => {
     const token = localStorage.getItem('prode_token')
@@ -220,12 +238,44 @@ export default function Dashboard() {
               {NAV.find(n => n.id === active)?.label ?? 'Dashboard'}
             </h2>
           </div>
+          {/* Timezone selector */}
+          <div className="relative">
+            <button
+              onClick={() => setTzOpen(o => !o)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-bg-surface hover:bg-bg-elevated text-xs font-semibold text-content-secondary hover:text-content-primary transition-colors"
+            >
+              <IconClock />
+              {tzLabel}
+              <span className="text-[9px] text-content-muted">▾</span>
+            </button>
+            {tzOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setTzOpen(false)} />
+                <div className="absolute right-0 top-full mt-1.5 z-20 bg-bg-surface border border-border rounded-xl shadow-card-hover overflow-hidden min-w-[160px]">
+                  {TZ_OPTIONS.map(opt => (
+                    <button
+                      key={opt.tz}
+                      onClick={() => setTz(opt.tz)}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                        tz === opt.tz
+                          ? 'bg-accent-subtle text-accent font-semibold'
+                          : 'text-content-secondary hover:bg-bg-elevated hover:text-content-primary'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      <span className="text-[10px] text-content-muted font-normal ml-3">{opt.short}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} />}
-          {active === 'fixture' && <FixtureContent user={user} />}
-          {active === 'mis-pronos' && <MisPronosContent user={user} />}
+          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} />}
+          {active === 'fixture' && <FixtureContent user={user} tz={tz} />}
+          {active === 'mis-pronos' && <MisPronosContent user={user} tz={tz} />}
           {active === 'posiciones' && <TablaContent user={user} />}
         </main>
       </div>
@@ -235,7 +285,7 @@ export default function Dashboard() {
 
 // ── Home ──────────────────────────────────────────────────────────────────────
 
-function HomeContent({ user, onNavigate }: { user: ProdeUser; onNavigate: (id: string) => void }) {
+function HomeContent({ user, onNavigate, tz }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [tabla, setTabla] = useState<TablaEntry[]>([])
   const token = localStorage.getItem('prode_token')
@@ -307,7 +357,7 @@ function HomeContent({ user, onNavigate }: { user: ProdeUser; onNavigate: (id: s
           </div>
           <div className="flex flex-col gap-2">
             {proximos.map(p => (
-              <PartidoCardCompact key={p.id} partido={p} />
+              <PartidoCardCompact key={p.id} partido={p} tz={tz} />
             ))}
           </div>
         </div>
@@ -416,8 +466,8 @@ function LiveMatchCard({ partido }: { partido: Partido }) {
   )
 }
 
-function PartidoCardCompact({ partido }: { partido: Partido }) {
-  const { date, time } = formatFecha(partido.fecha)
+function PartidoCardCompact({ partido, tz }: { partido: Partido; tz: string }) {
+  const { date, time } = formatFecha(partido.fecha, tz)
   return (
     <div className="card p-4 flex items-center gap-4">
       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -452,7 +502,7 @@ function PartidoCardCompact({ partido }: { partido: Partido }) {
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
-function FixtureContent(_: { user: ProdeUser }) {
+function FixtureContent({ tz }: { user: ProdeUser; tz: string }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [loading, setLoading] = useState(true)
   const [grupoActivo, setGrupoActivo] = useState<string | 'eliminatorias'>('A')
@@ -577,7 +627,7 @@ function FixtureContent(_: { user: ProdeUser }) {
           ) : (
             <div className="divide-y divide-border">
               {grupoPartidos.map(p => (
-                <PartidoRow key={p.id} partido={p} onSave={savePred} />
+                <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} />
               ))}
             </div>
           )}
@@ -594,7 +644,7 @@ function FixtureContent(_: { user: ProdeUser }) {
                 </div>
                 <div className="divide-y divide-border">
                   {fasePartidos.map(p => (
-                    <PartidoRow key={p.id} partido={p} onSave={savePred} />
+                    <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} />
                   ))}
                 </div>
               </div>
@@ -640,8 +690,8 @@ function useLiveMinute(fecha: string, estado: string): string {
 
 const LOCK_MINUTES = 30
 
-function PartidoRow({ partido, onSave }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void }) {
-  const { date, time } = formatFecha(partido.fecha)
+function PartidoRow({ partido, onSave, tz }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void; tz: string }) {
+  const { date, time } = formatFecha(partido.fecha, tz)
   const pred = partido.mi_prediccion
   const [gl, setGl] = useState(pred?.goles_local ?? 0)
   const [gv, setGv] = useState(pred?.goles_visitante ?? 0)
@@ -807,7 +857,7 @@ function ScoreInput({ value, onChange, disabled }: { value: number; onChange: (v
 
 // ── Mis Pronósticos ───────────────────────────────────────────────────────────
 
-function MisPronosContent(_: { user: ProdeUser }) {
+function MisPronosContent({ tz }: { user: ProdeUser; tz: string }) {
   const [preds, setPreds] = useState<(Prediccion & { partido: Partido })[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<'todos' | 'pendientes' | 'jugados'>('todos')
@@ -887,7 +937,7 @@ function MisPronosContent(_: { user: ProdeUser }) {
         <div className="card overflow-hidden">
           <div className="divide-y divide-border">
             {filtrados.map(pred => {
-              const { date, time } = formatFecha(pred.partido.fecha)
+              const { date, time } = formatFecha(pred.partido.fecha, tz)
               const puntosColor = pred.puntos === 3 ? 'text-status-win' : pred.puntos === 1 ? 'text-status-draw' : 'text-content-muted'
               const jugado = pred.partido.estado === 'finalizado'
               return (
@@ -1097,6 +1147,14 @@ function IconAdmin() {
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
       <circle cx="7" cy="4.5" r="2.5" stroke="currentColor" strokeWidth="1.2" />
       <path d="M1.5 12c0-2.5 2.5-4 5.5-4s5.5 1.5 5.5 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+function IconClock() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M6 3.5V6l1.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
