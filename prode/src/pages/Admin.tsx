@@ -158,6 +158,20 @@ export default function Admin() {
     }
   }
 
+  async function toggleAdmin(user: ProdeUser) {
+    try {
+      await fetch(`/api/prode/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({ is_admin: !user.is_admin }),
+      })
+      await fetchUsers()
+      showToast(user.is_admin ? 'Rol cambiado a Jugador' : 'Rol cambiado a Admin')
+    } catch {
+      showToast('Error al actualizar usuario')
+    }
+  }
+
   async function syncFixtures() {
     setSyncing(true)
     try {
@@ -275,10 +289,17 @@ export default function Admin() {
                       </button>
                     </td>
                     <td className="px-4 py-3">
-                      {user.is_admin
-                        ? <span className="text-xs font-semibold text-accent bg-accent-subtle border border-accent-border px-2 py-0.5 rounded-full">Admin</span>
-                        : <span className="text-xs text-content-muted">Jugador</span>
-                      }
+                      <button
+                        onClick={() => toggleAdmin(user)}
+                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                          user.is_admin
+                            ? 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
+                            : 'bg-border text-content-muted border border-transparent hover:bg-border-strong'
+                        }`}
+                        title={user.is_admin ? 'Quitar admin' : 'Dar admin'}
+                      >
+                        {user.is_admin ? 'Admin' : 'Jugador'}
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       {user.must_change_password
