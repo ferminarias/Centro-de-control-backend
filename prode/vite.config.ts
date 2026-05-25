@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'logo-nods.png'],
       manifest: {
-        name: 'Prode Mundial 2026',
-        short_name: 'Prode 2026',
+        name: 'Prode Nods',
+        short_name: 'Prode Nods',
         description: 'Jugá el Prode del Mundial 2026 con tu equipo',
         theme_color: '#0a0a0a',
         background_color: '#0a0a0a',
