@@ -13,6 +13,15 @@ export default function Login() {
   const [error, setError] = useState('')
   const [showEmailForm, setShowEmailForm] = useState(false)
 
+  useEffect(() => {
+    const token = localStorage.getItem('prode_token')
+    if (!token) return
+    // Validate token silently — if expired/invalid, stay on login
+    fetch('/api/prode/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => { if (r.ok) navigate('/dashboard', { replace: true }) })
+      .catch(() => {})
+  }, [])
+
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       // useGoogleLogin with flow='implicit' returns access_token, not credential
