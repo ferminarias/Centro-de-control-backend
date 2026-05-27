@@ -8,15 +8,15 @@ export default {
       },
       colors: {
         bg: {
-          base: '#000000',
-          surface: '#0D0D0D',
-          elevated: '#181818',
-          overlay: '#222222',
+          base: '#060c1a',
+          surface: '#0d1628',
+          elevated: '#152035',
+          overlay: '#1c2a42',
         },
         border: {
-          DEFAULT: '#2A2A2A',
-          subtle: '#1A1A1A',
-          strong: '#404040',
+          DEFAULT: '#1e2d4a',
+          subtle: '#131f33',
+          strong: '#2d4270',
         },
         content: {
           primary: '#FFFFFF',
