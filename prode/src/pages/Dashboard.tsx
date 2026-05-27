@@ -167,11 +167,11 @@ export default function Dashboard() {
               src="/wc26.jpeg"
               alt="FIFA World Cup 2026"
               className="shrink-0 object-cover"
-              style={{ width: '48px', height: '48px', mixBlendMode: 'screen' }}
+              style={{ width: '58px', height: '58px', mixBlendMode: 'screen' }}
             />
             <div className="flex flex-col gap-1.5">
-              <div className="overflow-hidden" style={{ height: '32px' }}>
-                <img src="/logo-nods.png" alt="NODS" style={{ height: '46px', width: 'auto' }} />
+              <div className="overflow-hidden" style={{ height: '26px' }}>
+                <img src="/logo-nods.png" alt="NODS" style={{ height: '38px', width: 'auto' }} />
               </div>
               <p className="text-[10px] font-semibold text-content-muted tracking-widest uppercase leading-none">
                 Prode 2026
