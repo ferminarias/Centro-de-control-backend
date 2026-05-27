@@ -147,7 +147,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-dvh flex font-mori animate-fade-in">
+    <div className="h-dvh flex font-mori animate-fade-in overflow-hidden">
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/70 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
@@ -233,7 +233,7 @@ export default function Dashboard() {
       </aside>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="border-b border-border bg-bg-base flex flex-col shrink-0">
           <div style={{ height: 'env(safe-area-inset-top, 0px)' }} />
           <div className="h-14 flex items-center px-4 lg:px-6 gap-4">
