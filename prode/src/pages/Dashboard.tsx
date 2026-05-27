@@ -166,8 +166,8 @@ export default function Dashboard() {
             <img
               src="/wc26.jpeg"
               alt="FIFA World Cup 2026"
-              className="shrink-0 rounded-md object-cover"
-              style={{ width: '36px', height: '36px' }}
+              className="shrink-0 object-cover"
+              style={{ width: '48px', height: '48px', mixBlendMode: 'screen' }}
             />
             <div className="flex flex-col gap-1.5">
               <div className="overflow-hidden" style={{ height: '32px' }}>
