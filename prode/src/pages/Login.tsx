@@ -76,7 +76,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-dvh bg-bg-base flex flex-col items-center justify-center px-4 animate-fade-in gap-4">
+    <div className="min-h-dvh flex flex-col items-center justify-center px-4 animate-fade-in gap-4">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{

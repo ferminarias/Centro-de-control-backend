@@ -223,7 +223,7 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-dvh bg-bg-base font-mori animate-fade-in">
+    <div className="min-h-dvh font-mori animate-fade-in">
       {/* Header */}
       <header className="h-14 border-b border-border bg-bg-base flex items-center px-6 gap-4">
         <button

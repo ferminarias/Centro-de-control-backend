@@ -140,14 +140,14 @@ export default function Dashboard() {
 
   if (!user) {
     return (
-      <div className="min-h-dvh bg-bg-base flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-dvh bg-bg-base flex font-mori animate-fade-in">
+    <div className="min-h-dvh flex font-mori animate-fade-in">
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/70 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}

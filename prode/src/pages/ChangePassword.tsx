@@ -49,7 +49,7 @@ export default function ChangePassword() {
   }
 
   return (
-    <div className="min-h-dvh bg-bg-base flex items-center justify-center px-4 animate-fade-in">
+    <div className="min-h-dvh flex items-center justify-center px-4 animate-fade-in">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: 'radial-gradient(ellipse 55% 45% at 50% 0%, rgba(25,70,227,0.15) 0%, transparent 70%)' }}
