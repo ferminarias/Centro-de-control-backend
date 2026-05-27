@@ -162,7 +162,13 @@ export default function Dashboard() {
         {/* Dynamic Island / notch spacer */}
         <div style={{ height: 'env(safe-area-inset-top, 0px)' }} className="shrink-0" />
         <div className="px-4 py-4 border-b border-border">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <img
+              src="/wc26.jpeg"
+              alt="FIFA World Cup 2026"
+              className="shrink-0 rounded-md object-cover"
+              style={{ width: '36px', height: '36px' }}
+            />
             <div className="flex flex-col gap-1.5">
               <div className="overflow-hidden" style={{ height: '32px' }}>
                 <img src="/logo-nods.png" alt="NODS" style={{ height: '46px', width: 'auto' }} />
@@ -171,12 +177,6 @@ export default function Dashboard() {
                 Prode 2026
               </p>
             </div>
-            <img
-              src="/mundial.png"
-              alt="Mundial 2026"
-              className="shrink-0 rounded-lg object-cover border border-border"
-              style={{ width: '44px', height: '44px' }}
-            />
           </div>
         </div>
 
