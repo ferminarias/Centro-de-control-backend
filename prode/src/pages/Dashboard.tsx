@@ -1266,87 +1266,166 @@ function TablaContent({ user }: { user: ProdeUser }) {
 // ── Rank Icons ────────────────────────────────────────────────────────────────
 
 function RankIcon({ pos, isMe }: { pos: number; isMe: boolean }) {
+  const g = `rk${pos}`
+  const txt = (t: string | number, fill: string, size = 10.5) => (
+    <text x="14" y="15" textAnchor="middle" dominantBaseline="central" fill={fill} fontSize={size} fontFamily="system-ui,sans-serif" fontWeight="800">{t}</text>
+  )
+
   if (pos === 1) return (
-    <svg width="28" height="28" viewBox="0 0 28 28" className="drop-shadow-[0_0_4px_rgba(99,179,255,0.6)]">
-      <polygon points="14,3 25,14 14,25 3,14" fill="#0d2fa8"/>
-      <polygon points="14,3 25,14 14,14" fill="#6db3f5"/>
-      <polygon points="14,3 3,14 14,14" fill="#3a78e8"/>
-      <polygon points="14,25 25,14 14,14" fill="#1946E3"/>
-      <polygon points="14,25 3,14 14,14" fill="#0d2fa8"/>
-      <polygon points="14,3 25,14 14,25 3,14" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.7"/>
-      <line x1="14" y1="3" x2="14" y2="25" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
-      <line x1="3" y1="14" x2="25" y2="14" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
-      <ellipse cx="11" cy="9" rx="2.5" ry="1.2" fill="white" opacity="0.55" transform="rotate(-35 11 9)"/>
-      <circle cx="20" cy="8" r="1" fill="white" opacity="0.7" className="animate-pulse"/>
+    <svg width="28" height="28" viewBox="0 0 28 28" className="drop-shadow-[0_0_5px_rgba(99,179,255,0.75)]">
+      <defs>
+        <radialGradient id={g} cx="38%" cy="28%" r="65%">
+          <stop offset="0%" stopColor="#b8dcff"/>
+          <stop offset="42%" stopColor="#3a78e8"/>
+          <stop offset="100%" stopColor="#0a1f8a"/>
+        </radialGradient>
+      </defs>
+      <polygon points="14,1 14.77,12.15 18.24,9.76 15.85,13.23 27,14 15.85,14.77 18.24,18.24 14.77,15.85 14,27 13.23,15.85 9.76,18.24 12.15,14.77 1,14 12.15,13.23 9.76,9.76 13.23,12.15" fill={`url(#${g})`}/>
+      <polygon points="14,1 14.77,12.15 18.24,9.76 15.85,13.23 27,14 15.85,14.77 18.24,18.24 14.77,15.85 14,27 13.23,15.85 9.76,18.24 12.15,14.77 1,14 12.15,13.23 9.76,9.76 13.23,12.15" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.6"/>
+      <circle cx="14" cy="1" r="1.1" fill="white" opacity="0.95" className="animate-pulse"/>
+      <circle cx="27" cy="14" r="1.1" fill="white" opacity="0.95" className="animate-pulse"/>
+      <circle cx="14" cy="27" r="1.1" fill="white" opacity="0.85"/>
+      <circle cx="1" cy="14" r="1.1" fill="white" opacity="0.85"/>
+      {txt(1, "white", 10)}
     </svg>
   )
+
   if (pos === 2) return (
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="12" fill="#8898c0" stroke="#c0ccdf" strokeWidth="1.5"/>
-      <circle cx="14" cy="14" r="9.5" fill="#9daac4"/>
-      <ellipse cx="10.5" cy="10" rx="3" ry="1.5" fill="white" opacity="0.4" transform="rotate(-25 10.5 10)"/>
-      <text x="14" y="18.5" textAnchor="middle" fill="#1c2840" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="800">2</text>
+      <defs>
+        <radialGradient id={g} cx="38%" cy="28%" r="65%">
+          <stop offset="0%" stopColor="#fff2a8"/>
+          <stop offset="42%" stopColor="#f0b830"/>
+          <stop offset="100%" stopColor="#7a3e00"/>
+        </radialGradient>
+      </defs>
+      <polygon points="14,2 12.85,11.23 5.51,5.51 11.23,12.85 2,14 11.23,15.15 5.51,22.49 12.85,16.77 14,26 15.15,16.77 22.49,22.49 16.77,15.15 26,14 16.77,12.85 22.49,5.51 15.15,11.23" fill={`url(#${g})`}/>
+      <polygon points="14,2 12.85,11.23 5.51,5.51 11.23,12.85 2,14 11.23,15.15 5.51,22.49 12.85,16.77 14,26 15.15,16.77 22.49,22.49 16.77,15.15 26,14 16.77,12.85 22.49,5.51 15.15,11.23" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="0.6"/>
+      {txt(2, "#3a1a00", 10)}
     </svg>
   )
+
   if (pos === 3) return (
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="12" fill="#b07040" stroke="#d49050" strokeWidth="1.5"/>
-      <circle cx="14" cy="14" r="9.5" fill="#c08050"/>
-      <ellipse cx="10.5" cy="10" rx="3" ry="1.5" fill="white" opacity="0.3" transform="rotate(-25 10.5 10)"/>
-      <text x="14" y="18.5" textAnchor="middle" fill="#2a0e00" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="800">3</text>
+      <defs>
+        <radialGradient id={g} cx="38%" cy="28%" r="65%">
+          <stop offset="0%" stopColor="#ffd870"/>
+          <stop offset="46%" stopColor="#d09020"/>
+          <stop offset="100%" stopColor="#6a3600"/>
+        </radialGradient>
+      </defs>
+      <polygon points="14,2 12.28,9.84 5.51,5.51 9.84,12.28 2,14 9.84,15.72 5.51,22.49 12.28,18.16 14,26 15.72,18.16 22.49,22.49 18.16,15.72 26,14 18.16,12.28 22.49,5.51 15.72,9.84" fill={`url(#${g})`}/>
+      <polygon points="14,2 12.28,9.84 5.51,5.51 9.84,12.28 2,14 9.84,15.72 5.51,22.49 12.28,18.16 14,26 15.72,18.16 22.49,22.49 18.16,15.72 26,14 18.16,12.28 22.49,5.51 15.72,9.84" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6"/>
+      {txt(3, "#3a1a00", 10)}
     </svg>
   )
+
   if (pos === 4) return (
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="11" fill="#c09820"/>
-      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.3" transform="rotate(-25 10.5 10)"/>
-      <text x="14" y="18.5" textAnchor="middle" fill="#2a1c00" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="800">4</text>
+      <defs>
+        <radialGradient id={g} cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#eaecf6"/>
+          <stop offset="46%" stopColor="#8890b4"/>
+          <stop offset="100%" stopColor="#424e70"/>
+        </radialGradient>
+      </defs>
+      <polygon points="14,2 16.94,9.95 25.41,10.29 18.76,15.55 21.05,23.71 14,19 6.95,23.71 9.24,15.55 2.59,10.29 11.06,9.95" fill={`url(#${g})`}/>
+      <polygon points="14,2 16.94,9.95 25.41,10.29 18.76,15.55 21.05,23.71 14,19 6.95,23.71 9.24,15.55 2.59,10.29 11.06,9.95" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.6"/>
+      {txt(4, "#181e38", 10)}
     </svg>
   )
+
   if (pos === 5) return (
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="11" fill="#b88a18"/>
-      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.35" transform="rotate(-25 10.5 10)"/>
-      <path d="M19 8 L21 6" stroke="white" strokeWidth="1" strokeLinecap="round" opacity="0.6"/>
-      <path d="M21 10 L23 10" stroke="white" strokeWidth="1" strokeLinecap="round" opacity="0.5"/>
-      <text x="14" y="18.5" textAnchor="middle" fill="#2a1600" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="800">5</text>
+      <defs>
+        <radialGradient id={g} cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#f6f8ff"/>
+          <stop offset="46%" stopColor="#b0bcd8"/>
+          <stop offset="100%" stopColor="#5c6a90"/>
+        </radialGradient>
+      </defs>
+      <polygon points="14,2 16.94,9.95 25.41,10.29 18.76,15.55 21.05,23.71 14,19 6.95,23.71 9.24,15.55 2.59,10.29 11.06,9.95" fill={`url(#${g})`}/>
+      <polygon points="14,2 16.94,9.95 25.41,10.29 18.76,15.55 21.05,23.71 14,19 6.95,23.71 9.24,15.55 2.59,10.29 11.06,9.95" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.6"/>
+      {txt(5, "#181e38", 10)}
     </svg>
   )
+
   if (pos === 6) return (
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="11" fill="#7888a8"/>
-      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.25" transform="rotate(-25 10.5 10)"/>
-      <text x="14" y="18.5" textAnchor="middle" fill="#e0e8f8" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="700">6</text>
+      <defs>
+        <radialGradient id={g} cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#fad490"/>
+          <stop offset="46%" stopColor="#d0883a"/>
+          <stop offset="100%" stopColor="#7a3810"/>
+        </radialGradient>
+      </defs>
+      <polygon points="14,2 2.59,10.29 6.95,23.71 21.05,23.71 25.41,10.29" fill={`url(#${g})`}/>
+      <polygon points="14,2 2.59,10.29 6.95,23.71 21.05,23.71 25.41,10.29" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6"/>
+      {txt(6, "#3d1800", 9.5)}
     </svg>
   )
+
   if (pos === 7) return (
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="11" fill="#6878a0"/>
-      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.25" transform="rotate(-25 10.5 10)"/>
-      <path d="M20 8 L21.5 6.5" stroke="white" strokeWidth="0.8" strokeLinecap="round" opacity="0.55"/>
-      <text x="14" y="18.5" textAnchor="middle" fill="#d8e0f0" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="700">7</text>
+      <defs>
+        <radialGradient id={g} cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#fad490"/>
+          <stop offset="46%" stopColor="#d0883a"/>
+          <stop offset="100%" stopColor="#7a3810"/>
+        </radialGradient>
+      </defs>
+      <polygon points="14,2 3.61,8 3.61,20 14,26 24.39,20 24.39,8" fill={`url(#${g})`}/>
+      <polygon points="14,2 3.61,8 3.61,20 14,26 24.39,20 24.39,8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6"/>
+      {txt(7, "#3d1800", 10)}
     </svg>
   )
+
   if (pos === 8) return (
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="11" fill="#906040"/>
-      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.2" transform="rotate(-25 10.5 10)"/>
-      <text x="14" y="18.5" textAnchor="middle" fill="#f0d8c0" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="700">8</text>
+      <defs>
+        <radialGradient id={g} cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#fad490"/>
+          <stop offset="46%" stopColor="#d0883a"/>
+          <stop offset="100%" stopColor="#7a3810"/>
+        </radialGradient>
+      </defs>
+      <polygon points="14,2 5.51,5.51 2,14 5.51,22.49 14,26 22.49,22.49 26,14 22.49,5.51" fill={`url(#${g})`}/>
+      <polygon points="14,2 5.51,5.51 2,14 5.51,22.49 14,26 22.49,22.49 26,14 22.49,5.51" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6"/>
+      {txt(8, "#3d1800", 10)}
     </svg>
   )
+
   if (pos === 9) return (
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="11" fill="#485068"/>
-      <ellipse cx="10.5" cy="10" rx="2" ry="1" fill="white" opacity="0.2" transform="rotate(-25 10.5 10)"/>
-      <text x="14" y="18.5" textAnchor="middle" fill="#a8b0c8" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="700">9</text>
+      <defs>
+        <radialGradient id={g} cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#fad490"/>
+          <stop offset="46%" stopColor="#d0883a"/>
+          <stop offset="100%" stopColor="#7a3810"/>
+        </radialGradient>
+      </defs>
+      <circle cx="14" cy="14" r="12" fill={`url(#${g})`}/>
+      <circle cx="14" cy="14" r="8.5" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.9"/>
+      <circle cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6"/>
+      {txt(9, "#3d1800", 10)}
     </svg>
   )
+
   if (pos === 10) return (
     <svg width="28" height="28" viewBox="0 0 28 28">
-      <circle cx="14" cy="14" r="11" fill="#3c4258"/>
-      <text x="14" y="18.5" textAnchor="middle" fill="#8088a0" fontSize="8.5" fontFamily="system-ui,sans-serif" fontWeight="700">10</text>
+      <defs>
+        <radialGradient id={g} cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#fad490"/>
+          <stop offset="46%" stopColor="#d0883a"/>
+          <stop offset="100%" stopColor="#7a3810"/>
+        </radialGradient>
+      </defs>
+      <circle cx="14" cy="14" r="12" fill={`url(#${g})`}/>
+      <circle cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6"/>
+      {txt(10, "#3d1800", 8.5)}
     </svg>
   )
+
   return (
     <span className={`text-sm font-semibold ${isMe ? 'text-accent' : 'text-content-muted'}`}>{pos}</span>
   )
