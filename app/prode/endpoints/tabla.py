@@ -24,10 +24,10 @@ def get_tabla(
             func.coalesce(func.sum(ProdePrediccion.puntos), 0).label("puntos"),
             func.count(ProdePrediccion.id).label("predicciones"),
             func.sum(
-                case((ProdePrediccion.puntos == 3, 1), else_=0)
+                case((ProdePrediccion.puntos == 5, 1), else_=0)
             ).label("exactos"),
             func.sum(
-                case((ProdePrediccion.puntos == 1, 1), else_=0)
+                case((ProdePrediccion.puntos == 3, 1), else_=0)
             ).label("resultados"),
         )
         .outerjoin(ProdePrediccion, ProdePrediccion.user_id == ProdeUser.id)
@@ -35,7 +35,7 @@ def get_tabla(
         .group_by(ProdeUser.id, ProdeUser.nombre, ProdeUser.apellido, ProdeUser.avatar_url)
         .order_by(
             func.coalesce(func.sum(ProdePrediccion.puntos), 0).desc(),
-            func.sum(case((ProdePrediccion.puntos == 3, 1), else_=0)).desc(),
+            func.sum(case((ProdePrediccion.puntos == 5, 1), else_=0)).desc(),
         )
         .all()
     )

@@ -20,7 +20,13 @@ class ProdeUser(Base):
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    es_gerente: Mapped[bool] = mapped_column(Boolean, default=False)
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=True)
+    club_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("prode_clubes.id", use_alter=True, name="fk_prode_user_club_id"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -64,6 +70,17 @@ class ProdePartido(Base):
     equipo_visitante: Mapped[Optional["ProdeEquipo"]] = relationship(
         "ProdeEquipo", foreign_keys=[equipo_visitante_id], lazy="joined"
     )
+
+
+class ProdeClub(Base):
+    __tablename__ = "prode_clubes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    nombre: Mapped[str] = mapped_column(String(100), nullable=False)
+    gerente_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("prode_users.id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ProdePrediccion(Base):

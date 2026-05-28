@@ -25,9 +25,19 @@ interface Props {
   onClearContext: () => void
 }
 
+function renderNodisContent(text: string) {
+  return text.split('\n').map((line, i) => {
+    if (/^━+$/.test(line)) {
+      return <div key={i} className="border-t border-white/20 my-1" />
+    }
+    if (!line) return <div key={i} className="h-2" />
+    return <div key={i}>{line}</div>
+  })
+}
+
 const WELCOME: Message = {
   role: 'assistant',
-  content: '¡Hola! Soy Nodis 🤖\nTu asistente del prode del Mundial 2026.\n\nPreguntame sobre cualquier partido y te ayudo a decidir tu pronóstico.',
+  content: 'Soy el Oráculo Nodis ✦\nConsultame sobre cualquier partido del Mundial 2026 y te revelo quién gana.',
 }
 
 export default function NodisWidget({ open, onClose, partidoContext, onClearContext }: Props) {
@@ -110,7 +120,7 @@ export default function NodisWidget({ open, onClose, partidoContext, onClearCont
 
       {/* Panel */}
       <div className={`
-        fixed top-0 right-0 h-full w-80 z-40 flex flex-col
+        fixed top-0 right-0 h-full w-full sm:w-80 z-40 flex flex-col overflow-hidden
         bg-bg-surface border-l border-border
         transition-transform duration-300
         lg:static lg:z-auto lg:translate-x-0 lg:shrink-0
@@ -123,7 +133,7 @@ export default function NodisWidget({ open, onClose, partidoContext, onClearCont
             <span className="text-white font-bold text-sm">N</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-content-primary leading-tight">Nodis</p>
+            <p className="text-sm font-semibold text-content-primary leading-tight">Oráculo Nodis</p>
             <p className="text-[10px] text-content-muted leading-tight">Asistente IA · Mundial 2026</p>
           </div>
           <button
@@ -150,21 +160,27 @@ export default function NodisWidget({ open, onClose, partidoContext, onClearCont
         )}
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 flex flex-col gap-3">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}>
               {msg.role === 'assistant' && (
                 <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-white font-bold text-[10px]">N</span>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <path d="M6.5 1L10.5 10.5H2.5L6.5 1Z" fill="white" fillOpacity="0.95"/>
+                    <rect x="1.5" y="10" width="10" height="2" rx="1" fill="white" fillOpacity="0.85"/>
+                    <path d="M6.5 5.5l0.32 1h1.05l-0.85 0.62 0.32 1-0.84-0.61-0.84 0.61 0.32-1-0.85-0.62h1.05z" fill="#1946E3"/>
+                  </svg>
                 </div>
               )}
               <div className="max-w-[82%] flex flex-col gap-2">
-                <div className={`rounded-2xl px-3 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                <div className={`rounded-2xl px-3 py-2.5 text-sm leading-relaxed break-words [overflow-wrap:anywhere] ${
                   msg.role === 'user'
                     ? 'bg-accent text-white rounded-tr-sm'
                     : 'bg-bg-elevated text-content-primary rounded-tl-sm'
                 }`}>
-                  {msg.content}
+                  {msg.role === 'assistant'
+                    ? renderNodisContent(msg.content)
+                    : <span className="whitespace-pre-wrap">{msg.content}</span>}
                 </div>
                 {msg.probabilities && partidoContext && (
                   <ProbabilityBar
@@ -180,7 +196,11 @@ export default function NodisWidget({ open, onClose, partidoContext, onClearCont
           {loading && (
             <div className="flex justify-start gap-2">
               <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center shrink-0">
-                <span className="text-white font-bold text-[10px]">N</span>
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M6.5 1L10.5 10.5H2.5L6.5 1Z" fill="white" fillOpacity="0.95"/>
+                  <rect x="1.5" y="10" width="10" height="2" rx="1" fill="white" fillOpacity="0.85"/>
+                  <path d="M6.5 5.5l0.32 1h1.05l-0.85 0.62 0.32 1-0.84-0.61-0.84 0.61 0.32-1-0.85-0.62h1.05z" fill="#1946E3"/>
+                </svg>
               </div>
               <div className="bg-bg-elevated rounded-2xl rounded-tl-sm px-4 py-3">
                 <div className="flex gap-1.5 items-center">

@@ -20,6 +20,7 @@ class ProdeUserResponse(BaseModel):
     avatar_url: Optional[str] = None
     activo: bool
     is_admin: bool
+    es_gerente: bool = False
     must_change_password: bool
     created_at: datetime
 
@@ -43,6 +44,7 @@ class ProdeUpdateUserRequest(BaseModel):
     apellido: Optional[str] = None
     activo: Optional[bool] = None
     is_admin: Optional[bool] = None
+    es_gerente: Optional[bool] = None
     new_password: Optional[str] = None
 
 
@@ -124,6 +126,34 @@ class TablaEntry(BaseModel):
     exactos: int
     resultados: int
     predicciones: int
+
+
+# ── Clubes (equipos de usuarios) ─────────────────────────────────────────────
+
+class ClubCreate(BaseModel):
+    nombre: str
+
+
+class ClubMemberAdd(BaseModel):
+    user_id: str
+
+
+class ClubResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre: str
+    gerente_id: uuid.UUID
+    created_at: datetime
+
+
+class ClubTablaEntry(BaseModel):
+    posicion: int
+    club_id: int
+    nombre: str
+    integrantes: int
+    promedio: float
+    total_puntos: int
 
 
 # ── Sync ──────────────────────────────────────────────────────────────────────

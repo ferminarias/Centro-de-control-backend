@@ -109,6 +109,8 @@ def update_prode_user(
         user.activo = body.activo
     if body.is_admin is not None:
         user.is_admin = body.is_admin
+    if body.es_gerente is not None:
+        user.es_gerente = body.es_gerente
     if body.new_password is not None:
         user.password_hash = hash_password(body.new_password)
         user.must_change_password = True

@@ -420,6 +420,34 @@ def _check_prode_partidos_tables(conn) -> None:
         logger.warning("Startup check: created prode_predicciones table")
 
 
+def _check_prode_clubs(conn) -> None:
+    """prode_clubes table + es_gerente / club_id on prode_users."""
+    if not _table_exists(conn, "prode_clubes"):
+        conn.execute(text("""
+            CREATE TABLE prode_clubes (
+                id SERIAL PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL,
+                gerente_id UUID NOT NULL REFERENCES prode_users(id),
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """))
+        conn.commit()
+        logger.warning("Startup check: created prode_clubes table")
+
+    if not _column_exists(conn, "prode_users", "es_gerente"):
+        conn.execute(text("ALTER TABLE prode_users ADD COLUMN es_gerente BOOLEAN NOT NULL DEFAULT FALSE"))
+        conn.commit()
+        logger.warning("Startup check: added es_gerente to prode_users")
+
+    if not _column_exists(conn, "prode_users", "club_id"):
+        conn.execute(text(
+            "ALTER TABLE prode_users ADD COLUMN club_id INTEGER "
+            "REFERENCES prode_clubes(id) ON DELETE SET NULL"
+        ))
+        conn.commit()
+        logger.warning("Startup check: added club_id to prode_users")
+
+
 def run_startup_checks(engine: Engine) -> None:
     """
     Run all schema fallback checks at application startup.
@@ -438,6 +466,7 @@ def run_startup_checks(engine: Engine) -> None:
             _check_campanias_columns(conn)
             _check_prode_users_table(conn)
             _check_prode_partidos_tables(conn)
+            _check_prode_clubs(conn)
         logger.info("Startup schema checks completed")
     except Exception as exc:
         logger.error("Startup schema checks failed: %s", exc)

@@ -106,10 +106,10 @@ def _normalize_api_name(raw: str) -> str:
 
 def calculate_points(pred_local: int, pred_visit: int, real_local: int, real_visit: int) -> int:
     if pred_local == real_local and pred_visit == real_visit:
-        return 3
+        return 5
     pred_sign = (pred_local > pred_visit) - (pred_local < pred_visit)
     real_sign = (real_local > real_visit) - (real_local < real_visit)
-    return 1 if pred_sign == real_sign else 0
+    return 3 if pred_sign == real_sign else 0
 
 
 def _resolve_team(

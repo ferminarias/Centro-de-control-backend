@@ -12,6 +12,7 @@ interface ProdeUser {
   email: string
   avatar_url: string | null
   is_admin: boolean
+  es_gerente: boolean
   must_change_password: boolean
 }
 
@@ -85,6 +86,7 @@ const NAV = [
   { id: 'fixture', label: 'Fixture', Icon: IconCalendar },
   { id: 'mis-pronos', label: 'Mis Pronósticos', Icon: IconPen },
   { id: 'posiciones', label: 'Posiciones', Icon: IconTrophy },
+  { id: 'mi-equipo', label: 'Mi Equipo', Icon: IconTeam, gerenteOnly: true },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -142,6 +144,16 @@ export default function Dashboard() {
     navigate('/')
   }
 
+  function openNodis(partido: Partido) {
+    if (!partido.equipo_local || !partido.equipo_visitante) return
+    setNodisContext({
+      id: partido.id,
+      equipoLocal: partido.equipo_local.nombre,
+      equipoVisitante: partido.equipo_visitante.nombre,
+    })
+    setNodisOpen(true)
+  }
+
   if (!user) {
     return (
       <div className="min-h-dvh flex items-center justify-center">
@@ -185,7 +197,7 @@ export default function Dashboard() {
         </div>
 
         <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5">
-          {NAV.map(({ id, label, Icon }) => {
+          {NAV.filter(n => !('gerenteOnly' in n) || user.es_gerente || user.is_admin).map(({ id, label, Icon }) => {
             const isActive = active === id
             return (
               <button
@@ -296,36 +308,34 @@ export default function Dashboard() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
-          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} />}
-          {active === 'fixture' && <FixtureContent user={user} tz={tz} />}
+          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} onNodis={openNodis} />}
+          {active === 'fixture' && <FixtureContent user={user} tz={tz} onNodis={openNodis} />}
           {active === 'mis-pronos' && <MisPronosContent user={user} tz={tz} />}
           {active === 'posiciones' && <TablaContent user={user} />}
+          {active === 'mi-equipo' && <EquipoContent user={user} />}
         </main>
       </div>
 
-      {/* Nodis FAB */}
+      {/* Oráculo Nodis FAB */}
       <button
         onClick={() => setNodisOpen(o => !o)}
         style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))', right: '1.5rem' }}
-        className={`fixed z-50 w-14 h-14 rounded-full shadow-accent flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
-          nodisOpen ? 'bg-accent-hover' : 'bg-accent'
+        className={`fixed z-50 w-14 h-14 rounded-full shadow-accent items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
+          nodisOpen ? 'hidden lg:flex bg-accent-hover' : 'flex bg-accent'
         }`}
-        title="Nodis IA"
+        title="Oráculo Nodis"
       >
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Head */}
-          <rect x="5" y="8" width="18" height="14" rx="3" fill="white" fillOpacity="0.95"/>
-          {/* Antenna */}
-          <line x1="14" y1="3" x2="14" y2="8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-          <circle cx="14" cy="2.5" r="1.5" fill="white"/>
-          {/* Eyes */}
-          <circle cx="10" cy="14" r="2" fill="#1946E3"/>
-          <circle cx="18" cy="14" r="2" fill="#1946E3"/>
-          {/* Mouth */}
-          <rect x="10" y="18" width="8" height="1.5" rx="0.75" fill="#1946E3"/>
-          {/* Ears */}
-          <rect x="2.5" y="12" width="2.5" height="4" rx="1" fill="white" fillOpacity="0.8"/>
-          <rect x="23" y="12" width="2.5" height="4" rx="1" fill="white" fillOpacity="0.8"/>
+          {/* Wizard hat body */}
+          <path d="M14 3L21.5 22H6.5L14 3Z" fill="white" fillOpacity="0.95"/>
+          {/* Hat brim */}
+          <rect x="4" y="21" width="20" height="3" rx="1.5" fill="white" fillOpacity="0.85"/>
+          {/* Star on hat */}
+          <path d="M14 11l0.55 1.65h1.75l-1.4 1.0 0.55 1.65-1.45-1.05-1.45 1.05 0.55-1.65-1.4-1.0h1.75z" fill="#1946E3"/>
+          {/* Sparkle top-right */}
+          <path d="M22 5l0.4 1.2 1.25 0.45-1.25 0.45L22 8.3l-0.4-1.2-1.25-0.45 1.25-0.45z" fill="white" fillOpacity="0.8"/>
+          {/* Small dot left */}
+          <circle cx="5.5" cy="8.5" r="1" fill="white" fillOpacity="0.5"/>
         </svg>
       </button>
 
@@ -342,7 +352,7 @@ export default function Dashboard() {
 
 // ── Home ──────────────────────────────────────────────────────────────────────
 
-function HomeContent({ user, onNavigate, tz }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string }) {
+function HomeContent({ user, onNavigate, tz, onNodis }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string; onNodis?: (p: Partido) => void }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [tabla, setTabla] = useState<TablaEntry[]>([])
   const token = localStorage.getItem('prode_token')
@@ -414,7 +424,7 @@ function HomeContent({ user, onNavigate, tz }: { user: ProdeUser; onNavigate: (i
           </div>
           <div className="flex flex-col gap-2">
             {proximos.map(p => (
-              <PartidoCardCompact key={p.id} partido={p} tz={tz} />
+              <PartidoCardCompact key={p.id} partido={p} tz={tz} onNodis={onNodis} />
             ))}
           </div>
         </div>
@@ -523,7 +533,7 @@ function LiveMatchCard({ partido }: { partido: Partido }) {
   )
 }
 
-function PartidoCardCompact({ partido, tz }: { partido: Partido; tz: string }) {
+function PartidoCardCompact({ partido, tz, onNodis }: { partido: Partido; tz: string; onNodis?: (p: Partido) => void }) {
   const { date, time } = formatFecha(partido.fecha, tz)
   return (
     <div className="card p-4 flex items-center gap-4">
@@ -553,13 +563,22 @@ function PartidoCardCompact({ partido, tz }: { partido: Partido; tz: string }) {
         <p className="text-xs text-content-secondary capitalize">{date}</p>
         <p className="text-xs text-content-muted">{time}</p>
       </div>
+      {onNodis && partido.equipo_local && partido.equipo_visitante && (
+        <button
+          onClick={() => onNodis(partido)}
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-content-muted hover:text-accent hover:bg-accent/10 transition-colors"
+          title="Consultar Oráculo Nodis"
+        >
+          <IconWand />
+        </button>
+      )}
     </div>
   )
 }
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
-function FixtureContent({ tz }: { user: ProdeUser; tz: string }) {
+function FixtureContent({ tz, onNodis }: { user: ProdeUser; tz: string; onNodis?: (p: Partido) => void }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [loading, setLoading] = useState(true)
   const [grupoActivo, setGrupoActivo] = useState<string | 'eliminatorias'>('A')
@@ -684,7 +703,7 @@ function FixtureContent({ tz }: { user: ProdeUser; tz: string }) {
           ) : (
             <div className="divide-y divide-border">
               {grupoPartidos.map(p => (
-                <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} />
+                <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} onNodis={onNodis} />
               ))}
             </div>
           )}
@@ -701,7 +720,7 @@ function FixtureContent({ tz }: { user: ProdeUser; tz: string }) {
                 </div>
                 <div className="divide-y divide-border">
                   {fasePartidos.map(p => (
-                    <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} />
+                    <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} onNodis={onNodis} />
                   ))}
                 </div>
               </div>
@@ -747,7 +766,7 @@ function useLiveMinute(fecha: string, estado: string): string {
 
 const LOCK_MINUTES = 30
 
-function PartidoRow({ partido, onSave, tz }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void; tz: string }) {
+function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void; tz: string; onNodis?: (p: Partido) => void }) {
   const { date, time } = formatFecha(partido.fecha, tz)
   const pred = partido.mi_prediccion
   const [gl, setGl] = useState(pred?.goles_local ?? 0)
@@ -770,9 +789,9 @@ function PartidoRow({ partido, onSave, tz }: { partido: Partido; onSave: (id: nu
   const minHastaCierre = Math.floor((cutoff.getTime() - ahora.getTime()) / 60000)
   const cierraProximo = !cerrado && minHastaCierre <= 60
 
-  const puntosColor = partido.mi_prediccion?.puntos === 3
+  const puntosColor = partido.mi_prediccion?.puntos === 5
     ? 'text-status-win'
-    : partido.mi_prediccion?.puntos === 1
+    : partido.mi_prediccion?.puntos === 3
       ? 'text-status-draw'
       : 'text-status-loss'
 
@@ -819,10 +838,10 @@ function PartidoRow({ partido, onSave, tz }: { partido: Partido; onSave: (id: nu
             </p>
             {yaPronosticado ? (
               <p className={`text-[11px] font-semibold ${puntosColor}`}>
-                {partido.mi_prediccion!.puntos === 3
-                  ? '⚽ +3 exacto'
-                  : partido.mi_prediccion!.puntos === 1
-                    ? '✓ +1 resultado'
+                {partido.mi_prediccion!.puntos === 5
+                  ? '⚽ +5 exacto'
+                  : partido.mi_prediccion!.puntos === 3
+                    ? '✓ +3 resultado'
                     : '✗ 0 pts'}
               </p>
             ) : (
@@ -891,6 +910,17 @@ function PartidoRow({ partido, onSave, tz }: { partido: Partido; onSave: (id: nu
         <p className="text-[11px] text-content-muted truncate">{partido.estadio ?? ''}</p>
       </div>
 
+      {/* Oracle button */}
+      {onNodis && partido.equipo_local && partido.equipo_visitante && (
+        <button
+          onClick={() => onNodis(partido)}
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-content-muted hover:text-accent hover:bg-accent/10 transition-colors"
+          title="Consultar Oráculo Nodis"
+        >
+          <IconWand />
+        </button>
+      )}
+
     </div>
   )
 }
@@ -935,8 +965,8 @@ function MisPronosContent({ tz }: { user: ProdeUser; tz: string }) {
   })
 
   const totalPts = preds.reduce((s, p) => s + (p.puntos ?? 0), 0)
-  const exactos = preds.filter(p => p.puntos === 3).length
-  const resultados = preds.filter(p => p.puntos === 1).length
+  const exactos = preds.filter(p => p.puntos === 5).length
+  const resultados = preds.filter(p => p.puntos === 3).length
   const jugados = preds.filter(p => p.partido.estado === 'finalizado').length
 
   if (loading) {
@@ -953,8 +983,8 @@ function MisPronosContent({ tz }: { user: ProdeUser; tz: string }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Puntos totales', value: String(totalPts), sub: 'acumulados' },
-          { label: 'Exactos', value: String(exactos), sub: '3 pts cada uno' },
-          { label: 'Resultados', value: String(resultados), sub: '1 pt cada uno' },
+          { label: 'Exactos', value: String(exactos), sub: '5 pts cada uno' },
+          { label: 'Resultados', value: String(resultados), sub: '3 pts cada uno' },
           { label: 'Pronósticos', value: `${preds.length}`, sub: `${jugados} jugados` },
         ].map(s => (
           <div key={s.label} className="card p-4">
@@ -996,7 +1026,7 @@ function MisPronosContent({ tz }: { user: ProdeUser; tz: string }) {
           <div className="divide-y divide-border">
             {filtrados.map(pred => {
               const { date, time } = formatFecha(pred.partido.fecha, tz)
-              const puntosColor = pred.puntos === 3 ? 'text-status-win' : pred.puntos === 1 ? 'text-status-draw' : 'text-content-muted'
+              const puntosColor = pred.puntos === 5 ? 'text-status-win' : pred.puntos === 3 ? 'text-status-draw' : 'text-content-muted'
               const jugado = pred.partido.estado === 'finalizado'
               return (
                 <div key={pred.id} className="px-4 py-3 flex items-center gap-3">
@@ -1029,7 +1059,7 @@ function MisPronosContent({ tz }: { user: ProdeUser; tz: string }) {
                   <div className="w-16 shrink-0 text-right">
                     {jugado ? (
                       <span className={`text-sm font-semibold ${puntosColor}`}>
-                        {pred.puntos === 3 ? '+3' : pred.puntos === 1 ? '+1' : '0'}
+                        {pred.puntos === 5 ? '+5' : pred.puntos === 3 ? '+3' : '0'}
                         <span className="text-[10px] font-normal ml-0.5">pts</span>
                       </span>
                     ) : (
@@ -1048,9 +1078,21 @@ function MisPronosContent({ tz }: { user: ProdeUser; tz: string }) {
 
 // ── Tabla de Posiciones ───────────────────────────────────────────────────────
 
+interface ClubTablaEntry {
+  posicion: number
+  club_id: number
+  nombre: string
+  integrantes: number
+  promedio: number
+  total_puntos: number
+}
+
 function TablaContent({ user }: { user: ProdeUser }) {
+  const [tab, setTab] = useState<'individual' | 'equipos'>('individual')
   const [tabla, setTabla] = useState<TablaEntry[]>([])
+  const [tablaEquipos, setTablaEquipos] = useState<ClubTablaEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingEquipos, setLoadingEquipos] = useState(false)
   const token = localStorage.getItem('prode_token')
 
   useEffect(() => {
@@ -1059,6 +1101,15 @@ function TablaContent({ user }: { user: ProdeUser }) {
       .then(setTabla)
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (tab !== 'equipos') return
+    setLoadingEquipos(true)
+    fetch('/api/prode/equipos/tabla', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setTablaEquipos(Array.isArray(data) ? data : []))
+      .finally(() => setLoadingEquipos(false))
+  }, [tab])
 
   if (loading) {
     return (
@@ -1072,79 +1123,436 @@ function TablaContent({ user }: { user: ProdeUser }) {
     <div className="flex flex-col gap-4 animate-slide-up">
       <div>
         <h1 className="text-xl font-semibold text-content-primary">Tabla de Posiciones</h1>
-        <p className="text-sm text-content-secondary mt-0.5">{tabla.length} participantes · 3 pts exacto · 1 pt resultado</p>
+        <p className="text-sm text-content-secondary mt-0.5">{tabla.length} participantes · 5 pts exacto · 3 pts resultado</p>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="label text-center px-3 py-3 w-10">#</th>
-              <th className="label text-left px-4 py-3">Jugador</th>
-              <th className="label text-center px-3 py-3">Pts</th>
-              <th className="label text-center px-3 py-3 hidden sm:table-cell">Exactos</th>
-              <th className="label text-center px-3 py-3 hidden sm:table-cell">Resultados</th>
-              <th className="label text-center px-3 py-3 hidden md:table-cell">Pronós.</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {tabla.map(entry => {
-              const isMe = entry.user_id === user.id
-              const medal = entry.posicion === 1 ? '🥇' : entry.posicion === 2 ? '🥈' : entry.posicion === 3 ? '🥉' : null
-              return (
-                <tr
-                  key={entry.user_id}
-                  className={`transition-colors ${isMe ? 'bg-accent-subtle' : 'hover:bg-bg-elevated'}`}
-                >
-                  <td className="px-3 py-3 text-center">
-                    {medal
-                      ? <span className="text-base">{medal}</span>
-                      : <span className={`text-sm font-semibold ${isMe ? 'text-accent' : 'text-content-muted'}`}>{entry.posicion}</span>
-                    }
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-[11px] font-semibold text-content-secondary shrink-0 overflow-hidden">
-                        {entry.avatar_url
-                          ? <img src={entry.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          : <>{entry.nombre[0]}{entry.apellido[0]}</>
-                        }
+      {/* Tabs */}
+      <div className="flex gap-1">
+        {(['individual', 'equipos'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors capitalize ${
+              tab === t ? 'bg-accent text-white' : 'bg-bg-surface text-content-muted hover:text-content-primary border border-border'
+            }`}
+          >
+            {t === 'individual' ? 'Individual' : 'Equipos'}
+          </button>
+        ))}
+      </div>
+
+      {/* Individual tab */}
+      {tab === 'individual' && (
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="label text-center px-3 py-3 w-10">#</th>
+                <th className="label text-left px-4 py-3">Jugador</th>
+                <th className="label text-center px-3 py-3">Pts</th>
+                <th className="label text-center px-3 py-3 hidden sm:table-cell">Exactos</th>
+                <th className="label text-center px-3 py-3 hidden sm:table-cell">Resultados</th>
+                <th className="label text-center px-3 py-3 hidden md:table-cell">Pronós.</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {tabla.map(entry => {
+                const isMe = entry.user_id === user.id
+                return (
+                  <tr
+                    key={entry.user_id}
+                    className={`transition-colors ${isMe ? 'bg-accent-subtle' : 'hover:bg-bg-elevated'}`}
+                  >
+                    <td className="px-3 py-3 text-center">
+                      <div className="flex justify-center">
+                        <RankIcon pos={entry.posicion} isMe={isMe} />
                       </div>
-                      <div>
-                        <p className={`font-medium leading-tight ${isMe ? 'text-accent' : 'text-content-primary'}`}>
-                          {entry.nombre} {entry.apellido}
-                          {isMe && <span className="ml-1.5 text-[10px] font-semibold bg-accent/10 text-accent px-1.5 py-0.5 rounded-full">vos</span>}
-                        </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-[11px] font-semibold text-content-secondary shrink-0 overflow-hidden">
+                          {entry.avatar_url
+                            ? <img src={entry.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            : <>{entry.nombre[0]}{entry.apellido[0]}</>
+                          }
+                        </div>
+                        <div>
+                          <p className={`font-medium leading-tight ${isMe ? 'text-accent' : 'text-content-primary'}`}>
+                            {entry.nombre} {entry.apellido}
+                            {isMe && <span className="ml-1.5 text-[10px] font-semibold bg-accent/10 text-accent px-1.5 py-0.5 rounded-full">vos</span>}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-center">
-                    <span className={`text-base font-semibold ${isMe ? 'text-accent' : 'text-content-primary'}`}>
-                      {entry.puntos}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-center hidden sm:table-cell">
-                    <span className="text-sm text-status-win font-medium">{entry.exactos}</span>
-                  </td>
-                  <td className="px-3 py-3 text-center hidden sm:table-cell">
-                    <span className="text-sm text-status-draw font-medium">{entry.resultados}</span>
-                  </td>
-                  <td className="px-3 py-3 text-center hidden md:table-cell">
-                    <span className="text-sm text-content-muted">{entry.predicciones}</span>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span className={`text-base font-semibold ${isMe ? 'text-accent' : 'text-content-primary'}`}>
+                        {entry.puntos}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-center hidden sm:table-cell">
+                      <span className="text-sm text-status-win font-medium">{entry.exactos}</span>
+                    </td>
+                    <td className="px-3 py-3 text-center hidden sm:table-cell">
+                      <span className="text-sm text-status-draw font-medium">{entry.resultados}</span>
+                    </td>
+                    <td className="px-3 py-3 text-center hidden md:table-cell">
+                      <span className="text-sm text-content-muted">{entry.predicciones}</span>
+                    </td>
+                  </tr>
+                )
+              })}
+              {tabla.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-content-muted text-sm">
+                    Aún no hay puntos registrados
                   </td>
                 </tr>
-              )
-            })}
-            {tabla.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-content-muted text-sm">
-                  Aún no hay puntos registrados
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Equipos tab */}
+      {tab === 'equipos' && (
+        loadingEquipos ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : tablaEquipos.length === 0 ? (
+          <div className="card p-10 text-center">
+            <p className="text-content-secondary text-sm">Todavía no hay equipos creados.</p>
+            <p className="text-content-muted text-xs mt-1">Los gerentes pueden crear equipos desde la sección Mi Equipo.</p>
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="label text-center px-3 py-3 w-10">#</th>
+                  <th className="label text-left px-4 py-3">Equipo</th>
+                  <th className="label text-center px-3 py-3">Integrantes</th>
+                  <th className="label text-center px-3 py-3">Total pts</th>
+                  <th className="label text-center px-3 py-3">Promedio</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {tablaEquipos.map(e => (
+                  <tr key={e.club_id} className="hover:bg-bg-elevated transition-colors">
+                    <td className="px-3 py-3 text-center">
+                      <div className="flex justify-center">
+                        <RankIcon pos={e.posicion} isMe={false} />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-content-primary">{e.nombre}</p>
+                    </td>
+                    <td className="px-3 py-3 text-center text-content-secondary">{e.integrantes}</td>
+                    <td className="px-3 py-3 text-center font-semibold text-content-primary">{e.total_puntos}</td>
+                    <td className="px-3 py-3 text-center">
+                      <span className="font-semibold text-accent">{e.promedio}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
+    </div>
+  )
+}
+
+// ── Rank Icons ────────────────────────────────────────────────────────────────
+
+function RankIcon({ pos, isMe }: { pos: number; isMe: boolean }) {
+  if (pos === 1) return (
+    <svg width="28" height="28" viewBox="0 0 28 28" className="drop-shadow-[0_0_4px_rgba(99,179,255,0.6)]">
+      <polygon points="14,3 25,14 14,25 3,14" fill="#0d2fa8"/>
+      <polygon points="14,3 25,14 14,14" fill="#6db3f5"/>
+      <polygon points="14,3 3,14 14,14" fill="#3a78e8"/>
+      <polygon points="14,25 25,14 14,14" fill="#1946E3"/>
+      <polygon points="14,25 3,14 14,14" fill="#0d2fa8"/>
+      <polygon points="14,3 25,14 14,25 3,14" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.7"/>
+      <line x1="14" y1="3" x2="14" y2="25" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
+      <line x1="3" y1="14" x2="25" y2="14" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
+      <ellipse cx="11" cy="9" rx="2.5" ry="1.2" fill="white" opacity="0.55" transform="rotate(-35 11 9)"/>
+      <circle cx="20" cy="8" r="1" fill="white" opacity="0.7" className="animate-pulse"/>
+    </svg>
+  )
+  if (pos === 2) return (
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="12" fill="#8898c0" stroke="#c0ccdf" strokeWidth="1.5"/>
+      <circle cx="14" cy="14" r="9.5" fill="#9daac4"/>
+      <ellipse cx="10.5" cy="10" rx="3" ry="1.5" fill="white" opacity="0.4" transform="rotate(-25 10.5 10)"/>
+      <text x="14" y="18.5" textAnchor="middle" fill="#1c2840" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="800">2</text>
+    </svg>
+  )
+  if (pos === 3) return (
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="12" fill="#b07040" stroke="#d49050" strokeWidth="1.5"/>
+      <circle cx="14" cy="14" r="9.5" fill="#c08050"/>
+      <ellipse cx="10.5" cy="10" rx="3" ry="1.5" fill="white" opacity="0.3" transform="rotate(-25 10.5 10)"/>
+      <text x="14" y="18.5" textAnchor="middle" fill="#2a0e00" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="800">3</text>
+    </svg>
+  )
+  if (pos === 4) return (
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="11" fill="#c09820"/>
+      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.3" transform="rotate(-25 10.5 10)"/>
+      <text x="14" y="18.5" textAnchor="middle" fill="#2a1c00" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="800">4</text>
+    </svg>
+  )
+  if (pos === 5) return (
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="11" fill="#b88a18"/>
+      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.35" transform="rotate(-25 10.5 10)"/>
+      <path d="M19 8 L21 6" stroke="white" strokeWidth="1" strokeLinecap="round" opacity="0.6"/>
+      <path d="M21 10 L23 10" stroke="white" strokeWidth="1" strokeLinecap="round" opacity="0.5"/>
+      <text x="14" y="18.5" textAnchor="middle" fill="#2a1600" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="800">5</text>
+    </svg>
+  )
+  if (pos === 6) return (
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="11" fill="#7888a8"/>
+      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.25" transform="rotate(-25 10.5 10)"/>
+      <text x="14" y="18.5" textAnchor="middle" fill="#e0e8f8" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="700">6</text>
+    </svg>
+  )
+  if (pos === 7) return (
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="11" fill="#6878a0"/>
+      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.25" transform="rotate(-25 10.5 10)"/>
+      <path d="M20 8 L21.5 6.5" stroke="white" strokeWidth="0.8" strokeLinecap="round" opacity="0.55"/>
+      <text x="14" y="18.5" textAnchor="middle" fill="#d8e0f0" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="700">7</text>
+    </svg>
+  )
+  if (pos === 8) return (
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="11" fill="#906040"/>
+      <ellipse cx="10.5" cy="10" rx="2.5" ry="1.3" fill="white" opacity="0.2" transform="rotate(-25 10.5 10)"/>
+      <text x="14" y="18.5" textAnchor="middle" fill="#f0d8c0" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="700">8</text>
+    </svg>
+  )
+  if (pos === 9) return (
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="11" fill="#485068"/>
+      <ellipse cx="10.5" cy="10" rx="2" ry="1" fill="white" opacity="0.2" transform="rotate(-25 10.5 10)"/>
+      <text x="14" y="18.5" textAnchor="middle" fill="#a8b0c8" fontSize="10" fontFamily="system-ui,sans-serif" fontWeight="700">9</text>
+    </svg>
+  )
+  if (pos === 10) return (
+    <svg width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="11" fill="#3c4258"/>
+      <text x="14" y="18.5" textAnchor="middle" fill="#8088a0" fontSize="8.5" fontFamily="system-ui,sans-serif" fontWeight="700">10</text>
+    </svg>
+  )
+  return (
+    <span className={`text-sm font-semibold ${isMe ? 'text-accent' : 'text-content-muted'}`}>{pos}</span>
+  )
+}
+
+// ── Equipo (Gerente) ──────────────────────────────────────────────────────────
+
+interface ClubMember { user_id: string; nombre: string; apellido: string; avatar_url: string | null; puntos: number }
+interface ClubDetail { id: number; nombre: string; gerente_id: string; miembros: ClubMember[] }
+interface AllUser { id: string; nombre: string; apellido: string; email: string; avatar_url: string | null }
+
+function EquipoContent({ user }: { user: ProdeUser }) {
+  const [club, setClub] = useState<ClubDetail | null | undefined>(undefined)
+  const [allUsers, setAllUsers] = useState<AllUser[]>([])
+  const [newNombre, setNewNombre] = useState('')
+  const [addUserId, setAddUserId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState('')
+  const token = localStorage.getItem('prode_token')
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
+
+  const fetchClub = useCallback(() => {
+    fetch('/api/prode/equipos/mi-equipo', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setClub(d ?? null))
+      .catch(() => setClub(null))
+  }, [token])
+
+  useEffect(() => { fetchClub() }, [fetchClub])
+
+  useEffect(() => {
+    if (!user.is_admin) return
+    fetch('/api/prode/admin/users', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(setAllUsers)
+      .catch(() => {})
+  }, [token, user.is_admin])
+
+  async function handleCreate() {
+    if (!newNombre.trim()) return
+    setSaving(true)
+    const res = await fetch('/api/prode/equipos', { method: 'POST', headers, body: JSON.stringify({ nombre: newNombre.trim() }) })
+    setSaving(false)
+    if (res.ok) { setNewNombre(''); fetchClub(); showToast('Equipo creado ✓') }
+    else { const d = await res.json(); showToast(d.detail || 'Error al crear') }
+  }
+
+  async function handleAddMember() {
+    if (!addUserId || !club) return
+    setSaving(true)
+    const res = await fetch(`/api/prode/equipos/${club.id}/miembros`, { method: 'POST', headers, body: JSON.stringify({ user_id: addUserId }) })
+    setSaving(false)
+    if (res.ok) { setAddUserId(''); fetchClub(); showToast('Miembro agregado ✓') }
+    else { const d = await res.json(); showToast(d.detail || 'Error') }
+  }
+
+  async function handleRemoveMember(userId: string) {
+    if (!club) return
+    const res = await fetch(`/api/prode/equipos/${club.id}/miembros/${userId}`, { method: 'DELETE', headers })
+    if (res.ok) { fetchClub(); showToast('Miembro eliminado') }
+    else { const d = await res.json(); showToast(d.detail || 'Error') }
+  }
+
+  async function handleDisolve() {
+    if (!club || !confirm(`¿Disolver el equipo "${club.nombre}"? Esta acción no se puede deshacer.`)) return
+    const res = await fetch(`/api/prode/equipos/${club.id}`, { method: 'DELETE', headers })
+    if (res.ok) { setClub(null); showToast('Equipo disuelto') }
+    else { const d = await res.json(); showToast(d.detail || 'Error') }
+  }
+
+  if (club === undefined) {
+    return <div className="flex items-center justify-center py-20"><div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>
+  }
+
+  const isGerente = user.es_gerente || user.is_admin
+  const isMiClub = club && String(club.gerente_id) === user.id
+
+  return (
+    <div className="flex flex-col gap-6 animate-slide-up">
+      <div>
+        <h1 className="text-xl font-semibold text-content-primary">Mi Equipo</h1>
+        <p className="text-sm text-content-secondary mt-0.5">Gestioná tu equipo de participantes</p>
       </div>
+
+      {/* Create team */}
+      {isGerente && !club && (
+        <div className="card p-5 flex flex-col gap-3">
+          <p className="text-sm font-semibold text-content-primary">Crear equipo</p>
+          <div className="flex gap-2">
+            <input
+              value={newNombre}
+              onChange={e => setNewNombre(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCreate()}
+              placeholder="Nombre del equipo"
+              className="flex-1 bg-bg-elevated text-content-primary text-sm rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:border-accent/50 placeholder:text-content-muted transition-colors"
+            />
+            <button
+              onClick={handleCreate}
+              disabled={!newNombre.trim() || saving}
+              className="px-4 py-2.5 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent-hover disabled:opacity-40 transition-colors"
+            >
+              {saving ? '...' : 'Crear'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Club detail */}
+      {club && (
+        <div className="flex flex-col gap-4">
+          <div className="card p-5 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-semibold text-content-primary">{club.nombre}</p>
+              <p className="text-xs text-content-muted mt-0.5">{club.miembros.length} integrante{club.miembros.length !== 1 ? 's' : ''}</p>
+            </div>
+            {isMiClub && (
+              <button onClick={handleDisolve} className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors border border-red-500/20">
+                Disolver
+              </button>
+            )}
+          </div>
+
+          {/* Members list */}
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-border">
+              <p className="text-sm font-semibold text-content-primary">Integrantes</p>
+            </div>
+            <div className="divide-y divide-border">
+              {club.miembros.map(m => (
+                <div key={m.user_id} className="px-4 py-3 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-xs font-semibold text-content-secondary shrink-0 overflow-hidden">
+                    {m.avatar_url
+                      ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      : <>{m.nombre[0]}{m.apellido[0]}</>
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-content-primary truncate">{m.nombre} {m.apellido}</p>
+                    {m.user_id === club.gerente_id && (
+                      <p className="text-[10px] text-accent font-semibold">Gerente</p>
+                    )}
+                  </div>
+                  <span className="text-sm font-semibold text-content-primary shrink-0">{m.puntos} pts</span>
+                  {isMiClub && m.user_id !== club.gerente_id && (
+                    <button onClick={() => handleRemoveMember(m.user_id)} className="text-content-muted hover:text-red-400 text-xs px-2 py-1 rounded-lg hover:bg-red-500/10 transition-colors">✕</button>
+                  )}
+                </div>
+              ))}
+              {club.miembros.length === 0 && (
+                <p className="px-4 py-6 text-sm text-content-muted text-center">Sin integrantes aún</p>
+              )}
+            </div>
+          </div>
+
+          {/* Add member (gerente only, admin has full user list) */}
+          {isMiClub && (
+            <div className="card p-4 flex flex-col gap-3">
+              <p className="text-sm font-semibold text-content-primary">Agregar integrante</p>
+              {user.is_admin && allUsers.length > 0 ? (
+                <div className="flex gap-2">
+                  <select
+                    value={addUserId}
+                    onChange={e => setAddUserId(e.target.value)}
+                    className="flex-1 bg-bg-elevated text-content-primary text-sm rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:border-accent/50 transition-colors"
+                  >
+                    <option value="">Seleccionar usuario...</option>
+                    {allUsers.filter(u => !club.miembros.find(m => m.user_id === u.id)).map(u => (
+                      <option key={u.id} value={u.id}>{u.nombre} {u.apellido} ({u.email})</option>
+                    ))}
+                  </select>
+                  <button onClick={handleAddMember} disabled={!addUserId || saving} className="px-4 py-2.5 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent-hover disabled:opacity-40 transition-colors">
+                    {saving ? '...' : 'Agregar'}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    value={addUserId}
+                    onChange={e => setAddUserId(e.target.value)}
+                    placeholder="ID del usuario (UUID)"
+                    className="flex-1 bg-bg-elevated text-content-primary text-sm rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:border-accent/50 placeholder:text-content-muted transition-colors"
+                  />
+                  <button onClick={handleAddMember} disabled={!addUserId || saving} className="px-4 py-2.5 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent-hover disabled:opacity-40 transition-colors">
+                    {saving ? '...' : 'Agregar'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isGerente && !club && (
+        <div className="card p-10 text-center">
+          <p className="text-content-secondary text-sm">No pertenecés a ningún equipo.</p>
+          <p className="text-content-muted text-xs mt-1">Un gerente debe agregarte a su equipo.</p>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-bg-elevated border border-border rounded-xl px-5 py-3 text-sm text-content-primary shadow-card-hover z-50">
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
@@ -1211,11 +1619,31 @@ function IconAdmin() {
     </svg>
   )
 }
+function IconTeam({ active }: { active: boolean }) {
+  const c = active ? '#1946E3' : 'currentColor'
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+      <circle cx="5.5" cy="4.5" r="2" stroke={c} strokeWidth="1.2"/>
+      <circle cx="10.5" cy="4.5" r="2" stroke={c} strokeWidth="1.2"/>
+      <path d="M1 12c0-2 2-3.5 4.5-3.5s4.5 1.5 4.5 3.5" stroke={c} strokeWidth="1.2" strokeLinecap="round"/>
+      <path d="M10.5 8.5c1.5 0 3 1 3 3" stroke={c} strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  )
+}
 function IconClock() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
       <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
       <path d="M6 3.5V6l1.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function IconWand() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M2.5 11.5L9 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <path d="M9 1.5l0.45 1.35 1.35 0.45-1.35 0.45L9 5.2l-0.45-1.45-1.35-0.45 1.35-0.45z" fill="currentColor"/>
+      <circle cx="2.5" cy="11.5" r="1" fill="currentColor"/>
     </svg>
   )
 }
