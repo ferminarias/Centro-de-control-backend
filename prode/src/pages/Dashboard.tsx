@@ -115,10 +115,6 @@ export default function Dashboard() {
   const [tz, setTzState] = useState(() => localStorage.getItem('prode_tz') || DEFAULT_TZ)
   const [tzOpen, setTzOpen] = useState(false)
 
-  const openNodis = (ctx: NodisPartidoContext) => {
-    setNodisContext(ctx)
-    setNodisOpen(true)
-  }
 
   function setTz(newTz: string) {
     localStorage.setItem('prode_tz', newTz)
@@ -300,8 +296,8 @@ export default function Dashboard() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
-          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} onNodis={openNodis} />}
-          {active === 'fixture' && <FixtureContent user={user} tz={tz} onNodis={openNodis} />}
+          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} />}
+          {active === 'fixture' && <FixtureContent user={user} tz={tz} />}
           {active === 'mis-pronos' && <MisPronosContent user={user} tz={tz} />}
           {active === 'posiciones' && <TablaContent user={user} />}
         </main>
@@ -346,7 +342,7 @@ export default function Dashboard() {
 
 // ── Home ──────────────────────────────────────────────────────────────────────
 
-function HomeContent({ user, onNavigate, tz, onNodis }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string; onNodis: (ctx: NodisPartidoContext) => void }) {
+function HomeContent({ user, onNavigate, tz }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [tabla, setTabla] = useState<TablaEntry[]>([])
   const token = localStorage.getItem('prode_token')
@@ -418,7 +414,7 @@ function HomeContent({ user, onNavigate, tz, onNodis }: { user: ProdeUser; onNav
           </div>
           <div className="flex flex-col gap-2">
             {proximos.map(p => (
-              <PartidoCardCompact key={p.id} partido={p} tz={tz} onNodis={onNodis} />
+              <PartidoCardCompact key={p.id} partido={p} tz={tz} />
             ))}
           </div>
         </div>
@@ -527,7 +523,7 @@ function LiveMatchCard({ partido }: { partido: Partido }) {
   )
 }
 
-function PartidoCardCompact({ partido, tz, onNodis }: { partido: Partido; tz: string; onNodis?: (ctx: NodisPartidoContext) => void }) {
+function PartidoCardCompact({ partido, tz }: { partido: Partido; tz: string }) {
   const { date, time } = formatFecha(partido.fecha, tz)
   return (
     <div className="card p-4 flex items-center gap-4">
@@ -563,7 +559,7 @@ function PartidoCardCompact({ partido, tz, onNodis }: { partido: Partido; tz: st
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
-function FixtureContent({ tz, onNodis }: { user: ProdeUser; tz: string; onNodis: (ctx: NodisPartidoContext) => void }) {
+function FixtureContent({ tz }: { user: ProdeUser; tz: string }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [loading, setLoading] = useState(true)
   const [grupoActivo, setGrupoActivo] = useState<string | 'eliminatorias'>('A')
@@ -688,7 +684,7 @@ function FixtureContent({ tz, onNodis }: { user: ProdeUser; tz: string; onNodis:
           ) : (
             <div className="divide-y divide-border">
               {grupoPartidos.map(p => (
-                <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} onNodis={onNodis} />
+                <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} />
               ))}
             </div>
           )}
@@ -705,7 +701,7 @@ function FixtureContent({ tz, onNodis }: { user: ProdeUser; tz: string; onNodis:
                 </div>
                 <div className="divide-y divide-border">
                   {fasePartidos.map(p => (
-                    <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} onNodis={onNodis} />
+                    <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} />
                   ))}
                 </div>
               </div>
@@ -751,7 +747,7 @@ function useLiveMinute(fecha: string, estado: string): string {
 
 const LOCK_MINUTES = 30
 
-function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void; tz: string; onNodis: (ctx: NodisPartidoContext) => void }) {
+function PartidoRow({ partido, onSave, tz }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void; tz: string }) {
   const { date, time } = formatFecha(partido.fecha, tz)
   const pred = partido.mi_prediccion
   const [gl, setGl] = useState(pred?.goles_local ?? 0)
