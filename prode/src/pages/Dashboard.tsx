@@ -1266,163 +1266,183 @@ function TablaContent({ user }: { user: ProdeUser }) {
 // ── Rank Icons ────────────────────────────────────────────────────────────────
 
 function RankIcon({ pos, isMe }: { pos: number; isMe: boolean }) {
-  const g = `rk${pos}`
-  const txt = (t: string | number, fill: string, size = 10.5) => (
-    <text x="14" y="15" textAnchor="middle" dominantBaseline="central" fill={fill} fontSize={size} fontFamily="system-ui,sans-serif" fontWeight="800">{t}</text>
-  )
+  const id = `rk${pos}`
 
-  if (pos === 1) return (
-    <svg width="28" height="28" viewBox="0 0 28 28" className="drop-shadow-[0_0_5px_rgba(99,179,255,0.75)]">
+  if (pos === 10) return (
+    <svg width="28" height="28" viewBox="-40 -40 80 80">
       <defs>
-        <radialGradient id={g} cx="38%" cy="28%" r="65%">
-          <stop offset="0%" stopColor="#b8dcff"/>
-          <stop offset="42%" stopColor="#3a78e8"/>
-          <stop offset="100%" stopColor="#0a1f8a"/>
+        <radialGradient id={`${id}_cu`} cx="33%" cy="28%" r="65%">
+          <stop offset="0%" stopColor="#f4b882"/>
+          <stop offset="48%" stopColor="#b87333"/>
+          <stop offset="100%" stopColor="#7c4a1e"/>
         </radialGradient>
       </defs>
-      <polygon points="14,1 14.77,12.15 18.24,9.76 15.85,13.23 27,14 15.85,14.77 18.24,18.24 14.77,15.85 14,27 13.23,15.85 9.76,18.24 12.15,14.77 1,14 12.15,13.23 9.76,9.76 13.23,12.15" fill={`url(#${g})`}/>
-      <polygon points="14,1 14.77,12.15 18.24,9.76 15.85,13.23 27,14 15.85,14.77 18.24,18.24 14.77,15.85 14,27 13.23,15.85 9.76,18.24 12.15,14.77 1,14 12.15,13.23 9.76,9.76 13.23,12.15" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.6"/>
-      <circle cx="14" cy="1" r="1.1" fill="white" opacity="0.95" className="animate-pulse"/>
-      <circle cx="27" cy="14" r="1.1" fill="white" opacity="0.95" className="animate-pulse"/>
-      <circle cx="14" cy="27" r="1.1" fill="white" opacity="0.85"/>
-      <circle cx="1" cy="14" r="1.1" fill="white" opacity="0.85"/>
-      {txt(1, "white", 10)}
-    </svg>
-  )
-
-  if (pos === 2) return (
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <defs>
-        <radialGradient id={g} cx="38%" cy="28%" r="65%">
-          <stop offset="0%" stopColor="#fff2a8"/>
-          <stop offset="42%" stopColor="#f0b830"/>
-          <stop offset="100%" stopColor="#7a3e00"/>
-        </radialGradient>
-      </defs>
-      <polygon points="14,2 12.85,11.23 5.51,5.51 11.23,12.85 2,14 11.23,15.15 5.51,22.49 12.85,16.77 14,26 15.15,16.77 22.49,22.49 16.77,15.15 26,14 16.77,12.85 22.49,5.51 15.15,11.23" fill={`url(#${g})`}/>
-      <polygon points="14,2 12.85,11.23 5.51,5.51 11.23,12.85 2,14 11.23,15.15 5.51,22.49 12.85,16.77 14,26 15.15,16.77 22.49,22.49 16.77,15.15 26,14 16.77,12.85 22.49,5.51 15.15,11.23" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="0.6"/>
-      {txt(2, "#3a1a00", 10)}
-    </svg>
-  )
-
-  if (pos === 3) return (
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <defs>
-        <radialGradient id={g} cx="38%" cy="28%" r="65%">
-          <stop offset="0%" stopColor="#ffd870"/>
-          <stop offset="46%" stopColor="#d09020"/>
-          <stop offset="100%" stopColor="#6a3600"/>
-        </radialGradient>
-      </defs>
-      <polygon points="14,2 12.28,9.84 5.51,5.51 9.84,12.28 2,14 9.84,15.72 5.51,22.49 12.28,18.16 14,26 15.72,18.16 22.49,22.49 18.16,15.72 26,14 18.16,12.28 22.49,5.51 15.72,9.84" fill={`url(#${g})`}/>
-      <polygon points="14,2 12.28,9.84 5.51,5.51 9.84,12.28 2,14 9.84,15.72 5.51,22.49 12.28,18.16 14,26 15.72,18.16 22.49,22.49 18.16,15.72 26,14 18.16,12.28 22.49,5.51 15.72,9.84" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.6"/>
-      {txt(3, "#3a1a00", 10)}
-    </svg>
-  )
-
-  if (pos === 4) return (
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <defs>
-        <radialGradient id={g} cx="38%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#eaecf6"/>
-          <stop offset="46%" stopColor="#8890b4"/>
-          <stop offset="100%" stopColor="#424e70"/>
-        </radialGradient>
-      </defs>
-      <polygon points="14,2 16.94,9.95 25.41,10.29 18.76,15.55 21.05,23.71 14,19 6.95,23.71 9.24,15.55 2.59,10.29 11.06,9.95" fill={`url(#${g})`}/>
-      <polygon points="14,2 16.94,9.95 25.41,10.29 18.76,15.55 21.05,23.71 14,19 6.95,23.71 9.24,15.55 2.59,10.29 11.06,9.95" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.6"/>
-      {txt(4, "#181e38", 10)}
-    </svg>
-  )
-
-  if (pos === 5) return (
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <defs>
-        <radialGradient id={g} cx="38%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#f6f8ff"/>
-          <stop offset="46%" stopColor="#b0bcd8"/>
-          <stop offset="100%" stopColor="#5c6a90"/>
-        </radialGradient>
-      </defs>
-      <polygon points="14,2 16.94,9.95 25.41,10.29 18.76,15.55 21.05,23.71 14,19 6.95,23.71 9.24,15.55 2.59,10.29 11.06,9.95" fill={`url(#${g})`}/>
-      <polygon points="14,2 16.94,9.95 25.41,10.29 18.76,15.55 21.05,23.71 14,19 6.95,23.71 9.24,15.55 2.59,10.29 11.06,9.95" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.6"/>
-      {txt(5, "#181e38", 10)}
-    </svg>
-  )
-
-  if (pos === 6) return (
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <defs>
-        <radialGradient id={g} cx="38%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#fad490"/>
-          <stop offset="46%" stopColor="#d0883a"/>
-          <stop offset="100%" stopColor="#7a3810"/>
-        </radialGradient>
-      </defs>
-      <polygon points="14,2 2.59,10.29 6.95,23.71 21.05,23.71 25.41,10.29" fill={`url(#${g})`}/>
-      <polygon points="14,2 2.59,10.29 6.95,23.71 21.05,23.71 25.41,10.29" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6"/>
-      {txt(6, "#3d1800", 9.5)}
-    </svg>
-  )
-
-  if (pos === 7) return (
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <defs>
-        <radialGradient id={g} cx="38%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#fad490"/>
-          <stop offset="46%" stopColor="#d0883a"/>
-          <stop offset="100%" stopColor="#7a3810"/>
-        </radialGradient>
-      </defs>
-      <polygon points="14,2 3.61,8 3.61,20 14,26 24.39,20 24.39,8" fill={`url(#${g})`}/>
-      <polygon points="14,2 3.61,8 3.61,20 14,26 24.39,20 24.39,8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6"/>
-      {txt(7, "#3d1800", 10)}
-    </svg>
-  )
-
-  if (pos === 8) return (
-    <svg width="28" height="28" viewBox="0 0 28 28">
-      <defs>
-        <radialGradient id={g} cx="38%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#fad490"/>
-          <stop offset="46%" stopColor="#d0883a"/>
-          <stop offset="100%" stopColor="#7a3810"/>
-        </radialGradient>
-      </defs>
-      <polygon points="14,2 5.51,5.51 2,14 5.51,22.49 14,26 22.49,22.49 26,14 22.49,5.51" fill={`url(#${g})`}/>
-      <polygon points="14,2 5.51,5.51 2,14 5.51,22.49 14,26 22.49,22.49 26,14 22.49,5.51" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6"/>
-      {txt(8, "#3d1800", 10)}
+      <circle r="26" fill={`url(#${id}_cu)`} stroke="#a06020" strokeWidth="1.5"/>
+      <circle cx="-10" cy="-9" r="6" fill="white" opacity="0.18"/>
+      <text textAnchor="middle" y="5" fontSize="13" fontWeight="700" fill="#fde8d0" fontFamily="sans-serif">10</text>
     </svg>
   )
 
   if (pos === 9) return (
-    <svg width="28" height="28" viewBox="0 0 28 28">
+    <svg width="28" height="28" viewBox="-40 -40 80 80">
       <defs>
-        <radialGradient id={g} cx="38%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#fad490"/>
-          <stop offset="46%" stopColor="#d0883a"/>
-          <stop offset="100%" stopColor="#7a3810"/>
+        <radialGradient id={`${id}_cu`} cx="33%" cy="28%" r="65%">
+          <stop offset="0%" stopColor="#f4b882"/>
+          <stop offset="48%" stopColor="#b87333"/>
+          <stop offset="100%" stopColor="#7c4a1e"/>
         </radialGradient>
       </defs>
-      <circle cx="14" cy="14" r="12" fill={`url(#${g})`}/>
-      <circle cx="14" cy="14" r="8.5" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.9"/>
-      <circle cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6"/>
-      {txt(9, "#3d1800", 10)}
+      <circle r="26" fill={`url(#${id}_cu)`} stroke="#b86c22" strokeWidth="1.5"/>
+      <circle r="20" fill="none" stroke="#f4a050" strokeWidth="1" opacity="0.38"/>
+      <circle cx="-9" cy="-9" r="5" fill="white" opacity="0.22"/>
+      <text textAnchor="middle" y="5" fontSize="15" fontWeight="700" fill="#fde8d0" fontFamily="sans-serif">9</text>
     </svg>
   )
 
-  if (pos === 10) return (
-    <svg width="28" height="28" viewBox="0 0 28 28">
+  if (pos === 8) return (
+    <svg width="28" height="28" viewBox="-40 -40 80 80">
       <defs>
-        <radialGradient id={g} cx="38%" cy="30%" r="65%">
-          <stop offset="0%" stopColor="#fad490"/>
-          <stop offset="46%" stopColor="#d0883a"/>
-          <stop offset="100%" stopColor="#7a3810"/>
+        <radialGradient id={`${id}_cu`} cx="33%" cy="28%" r="65%">
+          <stop offset="0%" stopColor="#f4b882"/>
+          <stop offset="48%" stopColor="#b87333"/>
+          <stop offset="100%" stopColor="#7c4a1e"/>
         </radialGradient>
       </defs>
-      <circle cx="14" cy="14" r="12" fill={`url(#${g})`}/>
-      <circle cx="14" cy="14" r="12" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6"/>
-      {txt(10, "#3d1800", 8.5)}
+      <polygon points="0,-26 18,-18 26,0 18,18 0,26 -18,18 -26,0 -18,-18" fill={`url(#${id}_cu)`} stroke="#a86020" strokeWidth="1.5"/>
+      <circle cx="-9" cy="-9" r="5" fill="white" opacity="0.22"/>
+      <text textAnchor="middle" y="5" fontSize="15" fontWeight="700" fill="#fde8d0" fontFamily="sans-serif">8</text>
+    </svg>
+  )
+
+  if (pos === 7) return (
+    <svg width="28" height="28" viewBox="-40 -40 80 80">
+      <defs>
+        <radialGradient id={`${id}_cu`} cx="33%" cy="28%" r="65%">
+          <stop offset="0%" stopColor="#f4b882"/>
+          <stop offset="48%" stopColor="#b87333"/>
+          <stop offset="100%" stopColor="#7c4a1e"/>
+        </radialGradient>
+      </defs>
+      <polygon points="0,-26 22,-13 22,13 0,26 -22,13 -22,-13" fill={`url(#${id}_cu)`} stroke="#b87030" strokeWidth="1.5"/>
+      <polygon points="0,-18 15,-9 15,9 0,18 -15,9 -15,-9" fill="none" stroke="#f4a050" strokeWidth="0.8" opacity="0.33"/>
+      <circle cx="-8" cy="-9" r="4" fill="white" opacity="0.25"/>
+      <text textAnchor="middle" y="5" fontSize="15" fontWeight="700" fill="#fde8d0" fontFamily="sans-serif">7</text>
+    </svg>
+  )
+
+  if (pos === 6) return (
+    <svg width="28" height="28" viewBox="-40 -40 80 80">
+      <defs>
+        <radialGradient id={`${id}_br`} cx="33%" cy="28%" r="65%">
+          <stop offset="0%" stopColor="#ecca82"/>
+          <stop offset="48%" stopColor="#cd7f32"/>
+          <stop offset="100%" stopColor="#7c5018"/>
+        </radialGradient>
+      </defs>
+      <polygon points="0,-26 25,-8 15,21 -15,21 -25,-8" fill={`url(#${id}_br)`} stroke="#9c6018" strokeWidth="1.5"/>
+      <circle cx="-9" cy="-9" r="4" fill="white" opacity="0.28"/>
+      <text textAnchor="middle" y="5" fontSize="15" fontWeight="700" fill="#fef3c7" fontFamily="sans-serif">6</text>
+    </svg>
+  )
+
+  if (pos === 5) return (
+    <svg width="28" height="28" viewBox="-40 -40 80 80">
+      <defs>
+        <radialGradient id={`${id}_si`} cx="30%" cy="24%" r="70%">
+          <stop offset="0%" stopColor="#ffffff"/>
+          <stop offset="28%" stopColor="#e2e8f0"/>
+          <stop offset="60%" stopColor="#94a3b8"/>
+          <stop offset="100%" stopColor="#475569"/>
+        </radialGradient>
+      </defs>
+      <polygon points="0,-26 8,-11 25,-8 12,4 15,21 0,13 -15,21 -12,4 -25,-8 -8,-11" fill={`url(#${id}_si)`} stroke="#64748b" strokeWidth="1.5"/>
+      <circle cx="-8" cy="-10" r="4" fill="white" opacity="0.45"/>
+      <text textAnchor="middle" y="5" fontSize="15" fontWeight="700" fill="#1e293b" fontFamily="sans-serif">5</text>
+    </svg>
+  )
+
+  if (pos === 4) return (
+    <svg width="28" height="28" viewBox="-40 -40 80 80">
+      <defs>
+        <radialGradient id={`${id}_si`} cx="30%" cy="24%" r="70%">
+          <stop offset="0%" stopColor="#ffffff"/>
+          <stop offset="28%" stopColor="#e2e8f0"/>
+          <stop offset="60%" stopColor="#94a3b8"/>
+          <stop offset="100%" stopColor="#475569"/>
+        </radialGradient>
+      </defs>
+      <polygon points="0,-26 5,-7 25,-8 9,3 15,21 0,9 -15,21 -9,3 -25,-8 -5,-7" fill={`url(#${id}_si)`} stroke="#94a3b8" strokeWidth="1.5"/>
+      <line x1="0" y1="-27" x2="0" y2="-34" stroke="#e2e8f0" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="26" y1="-9" x2="31" y2="-12" stroke="#e2e8f0" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="-26" y1="-9" x2="-31" y2="-12" stroke="#e2e8f0" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="-8" cy="-10" r="3.5" fill="white" opacity="0.5"/>
+      <text textAnchor="middle" y="5" fontSize="15" fontWeight="700" fill="#1e293b" fontFamily="sans-serif">4</text>
+    </svg>
+  )
+
+  if (pos === 3) return (
+    <svg width="28" height="28" viewBox="-40 -40 80 80">
+      <defs>
+        <radialGradient id={`${id}_go`} cx="30%" cy="24%" r="70%">
+          <stop offset="0%" stopColor="#fef9c3"/>
+          <stop offset="38%" stopColor="#fbbf24"/>
+          <stop offset="100%" stopColor="#b45309"/>
+        </radialGradient>
+      </defs>
+      <polygon points="0,-26 6,-10 22,-13 12,0 22,13 6,10 0,26 -6,10 -22,13 -12,0 -22,-13 -6,-10" fill={`url(#${id}_go)`} stroke="#b45309" strokeWidth="1.5"/>
+      <line x1="0" y1="-27" x2="0" y2="-35" stroke="#fde68a" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="23" y1="-14" x2="29" y2="-19" stroke="#fde68a" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="-23" y1="-14" x2="-29" y2="-19" stroke="#fde68a" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="-8" cy="-9" r="4" fill="white" opacity="0.38"/>
+      <text textAnchor="middle" y="5" fontSize="15" fontWeight="700" fill="#78350f" fontFamily="sans-serif">3</text>
+    </svg>
+  )
+
+  if (pos === 2) return (
+    <svg width="28" height="28" viewBox="-40 -40 80 80">
+      <defs>
+        <radialGradient id={`${id}_go`} cx="30%" cy="24%" r="70%">
+          <stop offset="0%" stopColor="#fef9c3"/>
+          <stop offset="38%" stopColor="#fbbf24"/>
+          <stop offset="100%" stopColor="#b45309"/>
+        </radialGradient>
+      </defs>
+      <polygon points="0,-26 4,-9 18,-18 9,-4 26,0 9,4 18,18 4,9 0,26 -4,9 -18,18 -9,4 -26,0 -9,-4 -18,-18 -4,-9" fill={`url(#${id}_go)`} stroke="#d97706" strokeWidth="1.5"/>
+      <line x1="0" y1="-27" x2="0" y2="-35" stroke="#fde68a" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="19" y1="-19" x2="25" y2="-25" stroke="#fde68a" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="-19" y1="-19" x2="-25" y2="-25" stroke="#fde68a" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="27" y1="0" x2="34" y2="0" stroke="#fde68a" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="-27" y1="0" x2="-34" y2="0" stroke="#fde68a" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="-8" cy="-10" r="4" fill="white" opacity="0.42"/>
+      <text textAnchor="middle" y="5" fontSize="15" fontWeight="700" fill="#78350f" fontFamily="sans-serif">2</text>
+    </svg>
+  )
+
+  if (pos === 1) return (
+    <svg width="28" height="28" viewBox="-40 -40 80 80" className="drop-shadow-[0_0_5px_rgba(96,165,250,0.75)]">
+      <defs>
+        <radialGradient id={`${id}_bl`} cx="28%" cy="22%" r="72%">
+          <stop offset="0%" stopColor="#dbeafe"/>
+          <stop offset="28%" stopColor="#60a5fa"/>
+          <stop offset="68%" stopColor="#2563eb"/>
+          <stop offset="100%" stopColor="#1e3a8a"/>
+        </radialGradient>
+        <radialGradient id={`${id}_bl2`} cx="68%" cy="68%" r="50%">
+          <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.55"/>
+          <stop offset="100%" stopColor="#1d4ed8" stopOpacity="0"/>
+        </radialGradient>
+      </defs>
+      <polygon points="0,-26 5,-11 18,-18 11,-5 26,0 11,5 18,18 5,11 0,26 -5,11 -18,18 -11,5 -26,0 -11,-5 -18,-18 -5,-11" fill={`url(#${id}_bl)`} stroke="#60a5fa" strokeWidth="1.5"/>
+      <polygon points="0,-26 5,-11 18,-18 11,-5 26,0 11,5 18,18 5,11 0,26 -5,11 -18,18 -11,5 -26,0 -11,-5 -18,-18 -5,-11" fill={`url(#${id}_bl2)`}/>
+      <polygon points="0,-13 9,-9 13,0 9,9 0,13 -9,9 -13,0 -9,-9" fill="none" stroke="#93c5fd" strokeWidth="0.7" opacity="0.5"/>
+      <circle cx="-9" cy="-10" r="5" fill="white" opacity="0.38"/>
+      <line x1="0" y1="-27" x2="0" y2="-36" stroke="#93c5fd" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="19" y1="-19" x2="26" y2="-26" stroke="#93c5fd" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="-19" y1="-19" x2="-26" y2="-26" stroke="#93c5fd" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="27" y1="0" x2="35" y2="0" stroke="#bfdbfe" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="-27" y1="0" x2="-35" y2="0" stroke="#bfdbfe" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="0" y1="27" x2="0" y2="35" stroke="#bfdbfe" strokeWidth="1.5" strokeLinecap="round"/>
+      <text textAnchor="middle" y="5" fontSize="16" fontWeight="700" fill="white" fontFamily="sans-serif">1</text>
     </svg>
   )
 
