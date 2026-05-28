@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Flags from 'country-flag-icons/react/3x2'
+import NodisWidget, { type NodisPartidoContext } from '../components/NodisWidget'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -109,8 +110,15 @@ export default function Dashboard() {
   const [user, setUser] = useState<ProdeUser | null>(null)
   const [active, setActive] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [nodisOpen, setNodisOpen] = useState(false)
+  const [nodisContext, setNodisContext] = useState<NodisPartidoContext | null>(null)
   const [tz, setTzState] = useState(() => localStorage.getItem('prode_tz') || DEFAULT_TZ)
   const [tzOpen, setTzOpen] = useState(false)
+
+  const openNodis = (ctx: NodisPartidoContext) => {
+    setNodisContext(ctx)
+    setNodisOpen(true)
+  }
 
   function setTz(newTz: string) {
     localStorage.setItem('prode_tz', newTz)
@@ -256,6 +264,19 @@ export default function Dashboard() {
               {NAV.find(n => n.id === active)?.label ?? 'Dashboard'}
             </h2>
           </div>
+          {/* Nodis toggle */}
+          <button
+            onClick={() => setNodisOpen(o => !o)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+              nodisOpen
+                ? 'bg-accent text-white border-accent'
+                : 'border-border bg-bg-surface hover:bg-bg-elevated text-content-secondary hover:text-content-primary'
+            }`}
+          >
+            <span>🤖</span>
+            <span className="hidden sm:inline">Nodis</span>
+          </button>
+
           {/* Timezone selector */}
           <div className="relative">
             <button
@@ -292,19 +313,27 @@ export default function Dashboard() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
-          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} />}
-          {active === 'fixture' && <FixtureContent user={user} tz={tz} />}
+          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} onNodis={openNodis} />}
+          {active === 'fixture' && <FixtureContent user={user} tz={tz} onNodis={openNodis} />}
           {active === 'mis-pronos' && <MisPronosContent user={user} tz={tz} />}
           {active === 'posiciones' && <TablaContent user={user} />}
         </main>
       </div>
+
+      {/* Nodis chat panel */}
+      <NodisWidget
+        open={nodisOpen}
+        onClose={() => setNodisOpen(false)}
+        partidoContext={nodisContext}
+        onClearContext={() => setNodisContext(null)}
+      />
     </div>
   )
 }
 
 // ── Home ──────────────────────────────────────────────────────────────────────
 
-function HomeContent({ user, onNavigate, tz }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string }) {
+function HomeContent({ user, onNavigate, tz, onNodis }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string; onNodis: (ctx: NodisPartidoContext) => void }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [tabla, setTabla] = useState<TablaEntry[]>([])
   const token = localStorage.getItem('prode_token')
@@ -376,7 +405,7 @@ function HomeContent({ user, onNavigate, tz }: { user: ProdeUser; onNavigate: (i
           </div>
           <div className="flex flex-col gap-2">
             {proximos.map(p => (
-              <PartidoCardCompact key={p.id} partido={p} tz={tz} />
+              <PartidoCardCompact key={p.id} partido={p} tz={tz} onNodis={onNodis} />
             ))}
           </div>
         </div>
@@ -485,7 +514,7 @@ function LiveMatchCard({ partido }: { partido: Partido }) {
   )
 }
 
-function PartidoCardCompact({ partido, tz }: { partido: Partido; tz: string }) {
+function PartidoCardCompact({ partido, tz, onNodis }: { partido: Partido; tz: string; onNodis?: (ctx: NodisPartidoContext) => void }) {
   const { date, time } = formatFecha(partido.fecha, tz)
   return (
     <div className="card p-4 flex items-center gap-4">
@@ -515,13 +544,20 @@ function PartidoCardCompact({ partido, tz }: { partido: Partido; tz: string }) {
         <p className="text-xs text-content-secondary capitalize">{date}</p>
         <p className="text-xs text-content-muted">{time}</p>
       </div>
+      {onNodis && partido.equipo_local && partido.equipo_visitante && (
+        <button
+          onClick={() => onNodis({ id: partido.id, equipoLocal: partido.equipo_local!.nombre, equipoVisitante: partido.equipo_visitante!.nombre })}
+          className="shrink-0 text-base hover:scale-110 transition-transform"
+          title="Consultar a Nodis"
+        >🤖</button>
+      )}
     </div>
   )
 }
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
-function FixtureContent({ tz }: { user: ProdeUser; tz: string }) {
+function FixtureContent({ tz, onNodis }: { user: ProdeUser; tz: string; onNodis: (ctx: NodisPartidoContext) => void }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [loading, setLoading] = useState(true)
   const [grupoActivo, setGrupoActivo] = useState<string | 'eliminatorias'>('A')
@@ -646,7 +682,7 @@ function FixtureContent({ tz }: { user: ProdeUser; tz: string }) {
           ) : (
             <div className="divide-y divide-border">
               {grupoPartidos.map(p => (
-                <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} />
+                <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} onNodis={onNodis} />
               ))}
             </div>
           )}
@@ -663,7 +699,7 @@ function FixtureContent({ tz }: { user: ProdeUser; tz: string }) {
                 </div>
                 <div className="divide-y divide-border">
                   {fasePartidos.map(p => (
-                    <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} />
+                    <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} onNodis={onNodis} />
                   ))}
                 </div>
               </div>
@@ -709,7 +745,7 @@ function useLiveMinute(fecha: string, estado: string): string {
 
 const LOCK_MINUTES = 30
 
-function PartidoRow({ partido, onSave, tz }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void; tz: string }) {
+function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void; tz: string; onNodis: (ctx: NodisPartidoContext) => void }) {
   const { date, time } = formatFecha(partido.fecha, tz)
   const pred = partido.mi_prediccion
   const [gl, setGl] = useState(pred?.goles_local ?? 0)
@@ -852,6 +888,15 @@ function PartidoRow({ partido, onSave, tz }: { partido: Partido; onSave: (id: nu
       <div className="w-24 shrink-0 hidden lg:block">
         <p className="text-[11px] text-content-muted truncate">{partido.estadio ?? ''}</p>
       </div>
+
+      {/* Nodis */}
+      {partido.equipo_local && partido.equipo_visitante && partido.estado === 'programado' && (
+        <button
+          onClick={() => onNodis({ id: partido.id, equipoLocal: partido.equipo_local!.nombre, equipoVisitante: partido.equipo_visitante!.nombre })}
+          className="shrink-0 text-base hover:scale-110 transition-transform"
+          title="Consultar a Nodis"
+        >🤖</button>
+      )}
     </div>
   )
 }
