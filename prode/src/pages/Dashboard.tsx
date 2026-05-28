@@ -264,19 +264,6 @@ export default function Dashboard() {
               {NAV.find(n => n.id === active)?.label ?? 'Dashboard'}
             </h2>
           </div>
-          {/* Nodis toggle */}
-          <button
-            onClick={() => setNodisOpen(o => !o)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
-              nodisOpen
-                ? 'bg-accent text-white border-accent'
-                : 'border-border bg-bg-surface hover:bg-bg-elevated text-content-secondary hover:text-content-primary'
-            }`}
-          >
-            <span>🤖</span>
-            <span className="hidden sm:inline">Nodis</span>
-          </button>
-
           {/* Timezone selector */}
           <div className="relative">
             <button
@@ -319,6 +306,32 @@ export default function Dashboard() {
           {active === 'posiciones' && <TablaContent user={user} />}
         </main>
       </div>
+
+      {/* Nodis FAB */}
+      <button
+        onClick={() => setNodisOpen(o => !o)}
+        style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))', right: '1.5rem' }}
+        className={`fixed z-50 w-14 h-14 rounded-full shadow-accent flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
+          nodisOpen ? 'bg-accent-hover' : 'bg-accent'
+        }`}
+        title="Nodis IA"
+      >
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Head */}
+          <rect x="5" y="8" width="18" height="14" rx="3" fill="white" fillOpacity="0.95"/>
+          {/* Antenna */}
+          <line x1="14" y1="3" x2="14" y2="8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+          <circle cx="14" cy="2.5" r="1.5" fill="white"/>
+          {/* Eyes */}
+          <circle cx="10" cy="14" r="2" fill="#1946E3"/>
+          <circle cx="18" cy="14" r="2" fill="#1946E3"/>
+          {/* Mouth */}
+          <rect x="10" y="18" width="8" height="1.5" rx="0.75" fill="#1946E3"/>
+          {/* Ears */}
+          <rect x="2.5" y="12" width="2.5" height="4" rx="1" fill="white" fillOpacity="0.8"/>
+          <rect x="23" y="12" width="2.5" height="4" rx="1" fill="white" fillOpacity="0.8"/>
+        </svg>
+      </button>
 
       {/* Nodis chat panel */}
       <NodisWidget
@@ -544,13 +557,6 @@ function PartidoCardCompact({ partido, tz, onNodis }: { partido: Partido; tz: st
         <p className="text-xs text-content-secondary capitalize">{date}</p>
         <p className="text-xs text-content-muted">{time}</p>
       </div>
-      {onNodis && partido.equipo_local && partido.equipo_visitante && (
-        <button
-          onClick={() => onNodis({ id: partido.id, equipoLocal: partido.equipo_local!.nombre, equipoVisitante: partido.equipo_visitante!.nombre })}
-          className="shrink-0 text-base hover:scale-110 transition-transform"
-          title="Consultar a Nodis"
-        >🤖</button>
-      )}
     </div>
   )
 }
@@ -889,14 +895,6 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
         <p className="text-[11px] text-content-muted truncate">{partido.estadio ?? ''}</p>
       </div>
 
-      {/* Nodis */}
-      {partido.equipo_local && partido.equipo_visitante && partido.estado === 'programado' && (
-        <button
-          onClick={() => onNodis({ id: partido.id, equipoLocal: partido.equipo_local!.nombre, equipoVisitante: partido.equipo_visitante!.nombre })}
-          className="shrink-0 text-base hover:scale-110 transition-transform"
-          title="Consultar a Nodis"
-        >🤖</button>
-      )}
     </div>
   )
 }
