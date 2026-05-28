@@ -321,7 +321,7 @@ export default function Dashboard() {
         onClick={() => setNodisOpen(o => !o)}
         style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))', right: '1.5rem' }}
         className={`fixed z-50 w-14 h-14 rounded-full shadow-accent items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
-          nodisOpen ? 'hidden lg:flex bg-accent-hover' : 'flex bg-accent'
+          nodisOpen ? 'hidden' : 'flex bg-accent'
         }`}
         title="Oráculo Nodis"
       >

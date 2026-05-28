@@ -130,7 +130,13 @@ export default function NodisWidget({ open, onClose, partidoContext, onClearCont
         <div style={{ height: 'env(safe-area-inset-top, 0px)' }} className="shrink-0 lg:hidden" />
         <div className="h-14 border-b border-border flex items-center px-4 gap-3 shrink-0">
           <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">N</span>
+            <svg width="20" height="20" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 3L21.5 22H6.5L14 3Z" fill="white" fillOpacity="0.95"/>
+              <rect x="4" y="21" width="20" height="3" rx="1.5" fill="white" fillOpacity="0.85"/>
+              <path d="M14 11l0.55 1.65h1.75l-1.4 1.0 0.55 1.65-1.45-1.05-1.45 1.05 0.55-1.65-1.4-1.0h1.75z" fill="#1946E3"/>
+              <path d="M22 5l0.4 1.2 1.25 0.45-1.25 0.45L22 8.3l-0.4-1.2-1.25-0.45 1.25-0.45z" fill="white" fillOpacity="0.8"/>
+              <circle cx="5.5" cy="8.5" r="1" fill="white" fillOpacity="0.5"/>
+            </svg>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-content-primary leading-tight">Oráculo Nodis</p>
