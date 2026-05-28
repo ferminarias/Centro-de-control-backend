@@ -13,27 +13,31 @@ from app.prode.services.footballdata_io import get_prediction
 
 router = APIRouter(tags=["Nodis IA"])
 
-SYSTEM_PROMPT = """\
-Sos Nodis, el asistente de IA del prode del Mundial FIFA 2026 de Grupo Nods.
-Sos conciso, directo, usás español rioplatense informal. Solo hablás de fútbol y el prode.
-No sos un modelo de lenguaje, no menciones OpenAI. Sos Nodis, punto.
+# Singleton client — evita crear una instancia por request
+_client: Optional[OpenAI] = None
 
-Cuando analizás un partido, SIEMPRE respondé con EXACTAMENTE este bloque, sin agregar texto antes ni después:
+def _get_client() -> OpenAI:
+    global _client
+    if _client is None:
+        _client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    return _client
 
-━━━━━━━━━━━━━━━━━━━━━
-🏆 [EQUIPO FAVORITO] gana
-━━━━━━━━━━━━━━━━━━━━━
-🎯  Pronóstico:   [Local] [GL] - [GV] [Visitante]
-⚡  Confianza:    [Alta / Media-Alta / Media / Baja]
-━━━━━━━━━━━━━━━━━━━━━
-📌 [Una sola oración con el motivo clave: forma reciente, historial, contexto de grupo/fase]
-━━━━━━━━━━━━━━━━━━━━━
-
-Reglas estrictas:
-- El pronóstico debe ser un marcador concreto (ej: 2-1, 1-0, 0-0)
-- Si tenés probabilidades estadísticas en el contexto, usálas para determinar la confianza
-- La explicación es UNA sola oración, máximo 20 palabras, sin relleno
-- Si te preguntan algo que no es análisis de un partido, respondé en máximo 2 líneas"""
+# Prompt compacto (~70 tokens vs ~250 anteriores)
+SYSTEM_PROMPT = (
+    "Sos Nodis, oráculo de IA del prode Mundial 2026 de Grupo Nods. "
+    "Español rioplatense, solo fútbol.\n"
+    "Para análisis de partido respondé EXACTAMENTE:\n"
+    "━━━━━━━━━━━━━━━━━━━━━\n"
+    "🏆 [FAVORITO] gana\n"
+    "━━━━━━━━━━━━━━━━━━━━━\n"
+    "🎯 Pronóstico: [Local] GL-GV [Visitante]\n"
+    "⚡ Confianza: [Alta/Media-Alta/Media/Baja]\n"
+    "━━━━━━━━━━━━━━━━━━━━━\n"
+    "📌 [1 oración ≤20 palabras]\n"
+    "━━━━━━━━━━━━━━━━━━━━━\n"
+    "Usá las probabilidades del contexto para la confianza. "
+    "Otras consultas: máximo 2 líneas."
+)
 
 
 class ChatMessage(BaseModel):
@@ -49,7 +53,7 @@ class NodisRequest(BaseModel):
 
 class NodisResponse(BaseModel):
     reply: str
-    probabilities: Optional[dict] = None  # { home_win, draw, away_win } as percentages
+    probabilities: Optional[dict] = None
 
 
 @router.post("/nodis/chat", response_model=NodisResponse)
@@ -61,9 +65,8 @@ def nodis_chat(
     if not settings.OPENAI_API_KEY:
         raise HTTPException(status_code=503, detail="Nodis no está disponible (falta OPENAI_API_KEY).")
 
-    # ── 1. Build match context from DB ─────────────────────────────────────────
+    # ── 1. Contexto del partido (1 línea compacta) ──────────────────────────────
     context_block = ""
-    probabilities_block = ""
     prob_data: Optional[dict] = None
 
     if req.partido_id:
@@ -71,18 +74,9 @@ def nodis_chat(
         if partido and partido.equipo_local and partido.equipo_visitante:
             local = partido.equipo_local.nombre
             visitante = partido.equipo_visitante.nombre
-            fecha_str = partido.fecha.strftime("%d/%m/%Y %H:%M UTC")
-            fase = partido.fase
-            grupo = f" — Grupo {partido.grupo}" if partido.grupo else ""
+            grupo = f" Grupo {partido.grupo}" if partido.grupo else ""
+            context_block = f"\nPartido: {local} vs {visitante} | {partido.fase}{grupo}"
 
-            context_block = (
-                f"\n\nContexto del partido:\n"
-                f"  {local} vs {visitante}\n"
-                f"  Fecha: {fecha_str}\n"
-                f"  Fase: {fase}{grupo}"
-            )
-
-            # ── 2. Fetch win probabilities from footballdata.io ─────────────
             if settings.FOOTBALLDATA_IO_API_KEY:
                 pred = get_prediction(
                     api_key=settings.FOOTBALLDATA_IO_API_KEY,
@@ -93,27 +87,24 @@ def nodis_chat(
                 if pred:
                     pct = pred.as_pct()
                     prob_data = pct
-                    probabilities_block = (
-                        f"\n\nProbabilidades estadísticas (footballdata.io):\n"
-                        f"  Victoria {local}: {pct['home_win']}\n"
-                        f"  Empate:           {pct['draw']}\n"
-                        f"  Victoria {visitante}: {pct['away_win']}"
+                    context_block += (
+                        f"\nStats: {local} {pct['home_win']} | "
+                        f"Empate {pct['draw']} | {visitante} {pct['away_win']}"
                     )
 
-    system = SYSTEM_PROMPT + context_block + probabilities_block
+    system = SYSTEM_PROMPT + context_block
 
-    # ── 3. Call OpenAI ─────────────────────────────────────────────────────────
+    # ── 2. Call OpenAI — historial recortado a 4 msgs (2 intercambios) ─────────
     messages: list[dict] = [{"role": "system", "content": system}]
-    for msg in req.history[-12:]:
+    for msg in req.history[-4:]:
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": req.message})
 
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
+    completion = _get_client().chat.completions.create(
+        model="gpt-4.1-nano",
         messages=messages,  # type: ignore[arg-type]
-        max_tokens=450,
-        temperature=0.75,
+        max_tokens=200,
+        temperature=0.5,
     )
 
     reply = completion.choices[0].message.content or "No pude generar una respuesta."
