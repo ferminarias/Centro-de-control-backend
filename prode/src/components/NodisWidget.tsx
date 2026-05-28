@@ -6,9 +6,16 @@ export interface NodisPartidoContext {
   equipoVisitante: string
 }
 
+interface Probabilities {
+  home_win: string  // e.g. "58%"
+  draw: string
+  away_win: string
+}
+
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  probabilities?: Probabilities | null
 }
 
 interface Props {
@@ -82,7 +89,7 @@ export default function NodisWidget({ open, onClose, partidoContext, onClearCont
       }
 
       const data = await res.json()
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply, probabilities: data.probabilities ?? null }])
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Error desconocido'
       setMessages(prev => [...prev, { role: 'assistant', content: `Lo siento, no pude procesar tu consulta: ${msg}` }])
@@ -151,12 +158,21 @@ export default function NodisWidget({ open, onClose, partidoContext, onClearCont
                   <span className="text-white font-bold text-[10px]">N</span>
                 </div>
               )}
-              <div className={`max-w-[82%] rounded-2xl px-3 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                msg.role === 'user'
-                  ? 'bg-accent text-white rounded-tr-sm'
-                  : 'bg-bg-elevated text-content-primary rounded-tl-sm'
-              }`}>
-                {msg.content}
+              <div className="max-w-[82%] flex flex-col gap-2">
+                <div className={`rounded-2xl px-3 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'bg-accent text-white rounded-tr-sm'
+                    : 'bg-bg-elevated text-content-primary rounded-tl-sm'
+                }`}>
+                  {msg.content}
+                </div>
+                {msg.probabilities && partidoContext && (
+                  <ProbabilityBar
+                    probs={msg.probabilities}
+                    home={partidoContext.equipoLocal}
+                    away={partidoContext.equipoVisitante}
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -207,5 +223,33 @@ export default function NodisWidget({ open, onClose, partidoContext, onClearCont
         </div>
       </div>
     </>
+  )
+}
+
+function ProbabilityBar({ probs, home, away }: { probs: Probabilities; home: string; away: string }) {
+  const parse = (s: string) => parseInt(s.replace('%', ''), 10) || 0
+  const hw = parse(probs.home_win)
+  const dr = parse(probs.draw)
+  const aw = parse(probs.away_win)
+
+  return (
+    <div className="bg-bg-elevated rounded-xl px-3 py-2.5 flex flex-col gap-2 border border-border/50">
+      <p className="text-[10px] font-semibold text-content-muted uppercase tracking-wider">Probabilidades · footballdata.io</p>
+      <div className="flex flex-col gap-1.5">
+        {[
+          { label: home, pct: hw, color: 'bg-accent' },
+          { label: 'Empate', pct: dr, color: 'bg-content-muted' },
+          { label: away, pct: aw, color: 'bg-status-loss' },
+        ].map(({ label, pct, color }) => (
+          <div key={label} className="flex items-center gap-2">
+            <span className="text-[10px] text-content-secondary w-16 truncate shrink-0">{label}</span>
+            <div className="flex-1 bg-bg-overlay rounded-full h-1.5 overflow-hidden">
+              <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+            </div>
+            <span className="text-[10px] font-semibold text-content-primary w-8 text-right shrink-0">{pct}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }

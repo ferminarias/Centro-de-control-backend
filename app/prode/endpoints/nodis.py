@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.prode.auth import get_current_prode_user
 from app.prode.models import ProdePartido, ProdeUser
+from app.prode.services.footballdata_io import get_prediction
 
 router = APIRouter(tags=["Nodis IA"])
 
@@ -26,6 +27,7 @@ Cuando recomendás un partido usá siempre este formato:
 📊 Confianza: [Baja / Media / Media-Alta / Alta]
 💡 [2-3 oraciones de análisis concreto: forma reciente, estadísticas, contexto del grupo/fase]
 
+Si tenés probabilidades estadísticas del partido, usálas como base para tu análisis y mencionálas.
 Si el usuario pregunta algo general sobre el Mundial respondé con datos reales y útiles.
 No digas que sos un modelo de lenguaje ni menciones a OpenAI. Sos Nodis, punto."""
 
@@ -43,6 +45,7 @@ class NodisRequest(BaseModel):
 
 class NodisResponse(BaseModel):
     reply: str
+    probabilities: Optional[dict] = None  # { home_win, draw, away_win } as percentages
 
 
 @router.post("/nodis/chat", response_model=NodisResponse)
@@ -54,25 +57,48 @@ def nodis_chat(
     if not settings.OPENAI_API_KEY:
         raise HTTPException(status_code=503, detail="Nodis no está disponible (falta OPENAI_API_KEY).")
 
-    # Build match context block if a partido_id was provided
+    # ── 1. Build match context from DB ─────────────────────────────────────────
     context_block = ""
+    probabilities_block = ""
+    prob_data: Optional[dict] = None
+
     if req.partido_id:
         partido = db.query(ProdePartido).filter(ProdePartido.id == req.partido_id).first()
         if partido and partido.equipo_local and partido.equipo_visitante:
             local = partido.equipo_local.nombre
             visitante = partido.equipo_visitante.nombre
-            fecha = partido.fecha.strftime("%d/%m/%Y %H:%M UTC")
+            fecha_str = partido.fecha.strftime("%d/%m/%Y %H:%M UTC")
             fase = partido.fase
             grupo = f" — Grupo {partido.grupo}" if partido.grupo else ""
+
             context_block = (
-                f"\n\nContexto del partido consultado:\n"
+                f"\n\nContexto del partido:\n"
                 f"  {local} vs {visitante}\n"
-                f"  Fecha: {fecha}\n"
+                f"  Fecha: {fecha_str}\n"
                 f"  Fase: {fase}{grupo}"
             )
 
-    system = SYSTEM_PROMPT + context_block
+            # ── 2. Fetch win probabilities from footballdata.io ─────────────
+            if settings.FOOTBALLDATA_IO_API_KEY:
+                pred = get_prediction(
+                    api_key=settings.FOOTBALLDATA_IO_API_KEY,
+                    home_team=local,
+                    away_team=visitante,
+                    fixture_date=partido.fecha.strftime("%Y-%m-%d"),
+                )
+                if pred:
+                    pct = pred.as_pct()
+                    prob_data = pct
+                    probabilities_block = (
+                        f"\n\nProbabilidades estadísticas (footballdata.io):\n"
+                        f"  Victoria {local}: {pct['home_win']}\n"
+                        f"  Empate:           {pct['draw']}\n"
+                        f"  Victoria {visitante}: {pct['away_win']}"
+                    )
 
+    system = SYSTEM_PROMPT + context_block + probabilities_block
+
+    # ── 3. Call OpenAI ─────────────────────────────────────────────────────────
     messages: list[dict] = [{"role": "system", "content": system}]
     for msg in req.history[-12:]:
         messages.append({"role": msg.role, "content": msg.content})
@@ -87,4 +113,4 @@ def nodis_chat(
     )
 
     reply = completion.choices[0].message.content or "No pude generar una respuesta."
-    return NodisResponse(reply=reply)
+    return NodisResponse(reply=reply, probabilities=prob_data)

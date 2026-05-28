@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://centro:centro_pass@db:5432/centro_control"
     ADMIN_API_KEY: str = ""
     FOOTBALL_DATA_API_KEY: str = ""
+    FOOTBALLDATA_IO_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_ALLOWED_DOMAIN: str = ""  # e.g. "gruponods.com" — vacío = cualquier dominio
