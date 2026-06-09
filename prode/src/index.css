@@ -132,12 +132,6 @@
     font-family: 'PP Mori', sans-serif;
   }
 
-  /* Prevent iOS auto-zoom on input focus (triggered when font-size < 16px) */
-  @media (max-width: 768px) {
-    input, select, textarea {
-      font-size: 16px;
-    }
-  }
 
   ::selection {
     background-color: rgba(25, 70, 227, 0.30);
@@ -160,6 +154,13 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background: #252c3e;
+  }
+}
+
+/* Outside any layer — overrides text-sm from @layer components to prevent iOS auto-zoom */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
   }
 }
 
