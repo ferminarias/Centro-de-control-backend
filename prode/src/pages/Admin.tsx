@@ -20,6 +20,22 @@ interface PartidoSimple {
   estado: string
 }
 
+interface Invitacion {
+  token: string
+  creado_por: string
+  created_at: string
+  activo: boolean
+}
+
+interface RegistroPendiente {
+  id: string
+  email: string
+  nombre: string
+  apellido: string
+  estado: string
+  created_at: string
+}
+
 const DEFAULT_PASSWORD = 'Nodsprode'
 
 export default function Admin() {
@@ -37,6 +53,13 @@ export default function Admin() {
   const [simGl, setSimGl] = useState(1)
   const [simGv, setSimGv] = useState(0)
   const [simLoading, setSimLoading] = useState(false)
+
+  const [invitaciones, setInvitaciones] = useState<Invitacion[]>([])
+  const [invLoading, setInvLoading] = useState(false)
+  const [copiedToken, setCopiedToken] = useState<string | null>(null)
+
+  const [pendientes, setPendientes] = useState<RegistroPendiente[]>([])
+  const [pendientesLoading, setPendientesLoading] = useState(false)
 
   const token = localStorage.getItem('prode_token')
 
@@ -66,6 +89,89 @@ export default function Admin() {
       .then((data: PartidoSimple[]) => setPartidos(Array.isArray(data) ? data : []))
       .catch(() => {})
   }, []) // eslint-disable-line
+
+  const fetchInvitaciones = useCallback(async () => {
+    try {
+      const res = await fetch('/api/prode/admin/invitaciones', { headers: authHeaders })
+      if (res.ok) setInvitaciones(await res.json())
+    } catch {}
+  }, []) // eslint-disable-line
+
+  const fetchPendientes = useCallback(async () => {
+    try {
+      const res = await fetch('/api/prode/admin/pendientes', { headers: authHeaders })
+      if (res.ok) setPendientes(await res.json())
+    } catch {}
+  }, []) // eslint-disable-line
+
+  useEffect(() => {
+    fetchInvitaciones()
+    fetchPendientes()
+  }, [fetchInvitaciones, fetchPendientes])
+
+  async function generarInvitacion() {
+    setInvLoading(true)
+    try {
+      const res = await fetch('/api/prode/admin/invitaciones', { method: 'POST', headers: authHeaders })
+      if (!res.ok) throw new Error()
+      await fetchInvitaciones()
+      showToast('Link de invitación generado')
+    } catch {
+      showToast('Error al generar invitación')
+    } finally {
+      setInvLoading(false)
+    }
+  }
+
+  async function revocarInvitacion(token: string) {
+    try {
+      await fetch(`/api/prode/admin/invitaciones/${token}`, { method: 'DELETE', headers: authHeaders })
+      await fetchInvitaciones()
+      showToast('Link revocado')
+    } catch {
+      showToast('Error al revocar')
+    }
+  }
+
+  function copiarLink(token: string) {
+    const url = `${window.location.origin}/registro/${token}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedToken(token)
+      setTimeout(() => setCopiedToken(null), 2000)
+    })
+  }
+
+  async function aceptarRegistro(id: string) {
+    setPendientesLoading(true)
+    try {
+      const res = await fetch(`/api/prode/admin/pendientes/${id}/aceptar`, { method: 'POST', headers: authHeaders })
+      if (!res.ok) {
+        const d = await res.json()
+        showToast(d.detail || 'Error al aceptar')
+        return
+      }
+      await fetchPendientes()
+      await fetchUsers()
+      showToast('Usuario aceptado y cuenta creada')
+    } catch {
+      showToast('Error al aceptar')
+    } finally {
+      setPendientesLoading(false)
+    }
+  }
+
+  async function rechazarRegistro(id: string) {
+    setPendientesLoading(true)
+    try {
+      await fetch(`/api/prode/admin/pendientes/${id}/rechazar`, { method: 'POST', headers: authHeaders })
+      await fetchPendientes()
+      showToast('Solicitud rechazada')
+    } catch {
+      showToast('Error al rechazar')
+    } finally {
+      setPendientesLoading(false)
+    }
+  }
 
   async function simularPartido() {
     if (!simPartidoId) return
@@ -349,6 +455,128 @@ export default function Admin() {
             </table>
           )}
         </div>
+
+        {/* Invitaciones */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-sm font-semibold text-content-primary">Links de invitación</h2>
+              <p className="text-xs text-content-muted mt-0.5">Cualquiera con el link puede solicitar acceso</p>
+            </div>
+            <button
+              onClick={generarInvitacion}
+              disabled={invLoading}
+              className="flex items-center gap-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <IconPlus /> Generar link
+            </button>
+          </div>
+          <div className="card overflow-hidden">
+            {invitaciones.filter(i => i.activo).length === 0 ? (
+              <div className="py-10 text-center text-content-muted text-sm">No hay links activos</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="label text-left px-4 py-3">Link</th>
+                    <th className="label text-left px-4 py-3">Creado</th>
+                    <th className="label text-left px-4 py-3">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {invitaciones.filter(i => i.activo).map(inv => (
+                    <tr key={inv.token} className="hover:bg-bg-elevated transition-colors">
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs text-content-secondary bg-bg-elevated border border-border rounded px-2 py-1 select-all">
+                          {`${window.location.origin}/registro/${inv.token}`}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-content-muted text-xs">
+                        {new Date(inv.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => copiarLink(inv.token)}
+                            className="text-xs text-content-secondary hover:text-accent border border-border hover:border-accent/30 px-2.5 py-1 rounded-lg transition-all"
+                          >
+                            {copiedToken === inv.token ? '¡Copiado!' : 'Copiar link'}
+                          </button>
+                          <button
+                            onClick={() => revocarInvitacion(inv.token)}
+                            className="text-xs text-content-muted hover:text-status-loss border border-border hover:border-red-500/30 px-2.5 py-1 rounded-lg transition-all"
+                          >
+                            Revocar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* Solicitudes pendientes */}
+        {pendientes.length > 0 && (
+          <div className="mt-8">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-sm font-semibold text-content-primary">Solicitudes pendientes</h2>
+              <span className="text-xs font-bold bg-accent/20 text-accent border border-accent/30 px-2 py-0.5 rounded-full">
+                {pendientes.length}
+              </span>
+            </div>
+            <div className="card overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="label text-left px-4 py-3">Nombre</th>
+                    <th className="label text-left px-4 py-3">Email</th>
+                    <th className="label text-left px-4 py-3">Fecha</th>
+                    <th className="label text-left px-4 py-3">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {pendientes.map(reg => (
+                    <tr key={reg.id} className="hover:bg-bg-elevated transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-[11px] font-semibold text-content-secondary shrink-0">
+                            {reg.nombre[0]}{reg.apellido[0]}
+                          </div>
+                          <span className="text-content-primary font-medium">{reg.nombre} {reg.apellido}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-content-secondary">{reg.email}</td>
+                      <td className="px-4 py-3 text-content-muted text-xs">
+                        {new Date(reg.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => aceptarRegistro(reg.id)}
+                            disabled={pendientesLoading}
+                            className="text-xs font-semibold text-status-win hover:bg-status-win/10 border border-status-win/30 px-2.5 py-1 rounded-lg transition-all disabled:opacity-50"
+                          >
+                            Aceptar
+                          </button>
+                          <button
+                            onClick={() => rechazarRegistro(reg.id)}
+                            disabled={pendientesLoading}
+                            className="text-xs text-content-muted hover:text-status-loss border border-border hover:border-red-500/30 px-2.5 py-1 rounded-lg transition-all disabled:opacity-50"
+                          >
+                            Rechazar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Simulador */}
         <div className="mt-8">

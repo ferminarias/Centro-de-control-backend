@@ -83,6 +83,32 @@ class ProdeClub(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class ProdeInvitacion(Base):
+    __tablename__ = "prode_invitaciones"
+
+    token: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    creado_por: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("prode_users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class ProdeRegistroPendiente(Base):
+    __tablename__ = "prode_registros_pendientes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    nombre: Mapped[str] = mapped_column(String(100), nullable=False)
+    apellido: Mapped[str] = mapped_column(String(100), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    invitacion_token: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("prode_invitaciones.token", ondelete="SET NULL"), nullable=True
+    )
+    estado: Mapped[str] = mapped_column(String(20), nullable=False, default="pendiente")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ProdePrediccion(Base):
     __tablename__ = "prode_predicciones"
 

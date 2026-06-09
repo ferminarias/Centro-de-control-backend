@@ -156,6 +156,36 @@ class ClubTablaEntry(BaseModel):
     total_puntos: int
 
 
+# ── Invitaciones ──────────────────────────────────────────────────────────────
+
+class InvitacionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    token: uuid.UUID
+    creado_por: uuid.UUID
+    created_at: datetime
+    activo: bool
+
+
+class RegistroConInvitacionRequest(BaseModel):
+    token: uuid.UUID
+    email: str
+    nombre: str
+    apellido: str
+    password: str
+
+
+class RegistroPendienteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    nombre: str
+    apellido: str
+    estado: str
+    created_at: datetime
+
+
 # ── Sync ──────────────────────────────────────────────────────────────────────
 
 class SyncResponse(BaseModel):
