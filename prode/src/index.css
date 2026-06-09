@@ -157,13 +157,6 @@
   }
 }
 
-/* Outside any layer — overrides text-sm from @layer components to prevent iOS auto-zoom */
-@media (max-width: 768px) {
-  input, select, textarea {
-    font-size: 16px !important;
-  }
-}
-
 @layer components {
   .btn-primary {
     @apply w-full bg-accent text-white font-mori font-semibold py-3 px-6 rounded-lg
@@ -179,7 +172,7 @@
 
   .input-field {
     @apply w-full bg-bg-elevated text-content-primary font-mori font-light
-           border border-border rounded-lg px-4 py-3 text-sm
+           border border-border rounded-lg px-4 py-3 text-base
            placeholder:text-content-muted
            transition-all duration-200
            focus:outline-none focus:border-accent/50 focus:shadow-input-focus;
