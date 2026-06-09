@@ -34,9 +34,9 @@ STATUS_MAP = {
     "IN_PLAY": "en_juego",
     "PAUSED": "en_juego",
     "FINISHED": "finalizado",
-    "POSTPONED": "programado",
-    "SUSPENDED": "programado",
-    "CANCELLED": "programado",
+    "POSTPONED": "postergado",
+    "SUSPENDED": "postergado",
+    "CANCELLED": "cancelado",
 }
 
 # FIFA WC 2026 TLA (3-letter code) → ISO 3166-1 alpha-2 (for flags)
@@ -302,6 +302,16 @@ def sync_wc_fixtures(db: Session, api_key: str) -> dict:
 
     db.commit()
 
+    # Broadcast real-time updates to SSE subscribers
+    try:
+        from app.prode import events as _events
+        if created > 0 or updated > 0:
+            _events.broadcast("fixture_updated")
+        if points_updated > 0:
+            _events.broadcast("tabla_updated")
+    except Exception:
+        pass
+
     result: dict = {
         "partidos_creados": created,
         "partidos_actualizados": updated,
@@ -378,4 +388,13 @@ def apply_resultado_manual(
         pts += 1
 
     db.commit()
+
+    # Broadcast to SSE subscribers
+    try:
+        from app.prode import events as _events
+        _events.broadcast("fixture_updated")
+        _events.broadcast("tabla_updated")
+    except Exception:
+        pass
+
     return pts

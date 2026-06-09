@@ -131,8 +131,9 @@ export default function Login() {
             ) : (
               <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="label">Email</label>
+                  <label htmlFor="login-email" className="label">Email</label>
                   <input
+                    id="login-email"
                     type="email" className="input-field"
                     placeholder="tu@gruponods.com"
                     value={email} onChange={e => setEmail(e.target.value)}
@@ -140,8 +141,9 @@ export default function Login() {
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="label">Contraseña</label>
+                  <label htmlFor="login-password" className="label">Contraseña</label>
                   <input
+                    id="login-password"
                     type="password" className="input-field"
                     placeholder="••••••••"
                     value={password} onChange={e => setPassword(e.target.value)}

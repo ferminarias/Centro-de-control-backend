@@ -42,6 +42,9 @@ run_startup_checks(engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
+    from app.prode import events as prode_events
+    prode_events.set_event_loop(asyncio.get_event_loop())
     start_scheduler()
     yield
     stop_scheduler()

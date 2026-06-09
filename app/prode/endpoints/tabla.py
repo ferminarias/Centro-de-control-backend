@@ -36,6 +36,7 @@ def get_tabla(
         .order_by(
             func.coalesce(func.sum(ProdePrediccion.puntos), 0).desc(),
             func.sum(case((ProdePrediccion.puntos == 5, 1), else_=0)).desc(),
+            func.sum(case((ProdePrediccion.puntos == 3, 1), else_=0)).desc(),
         )
         .all()
     )

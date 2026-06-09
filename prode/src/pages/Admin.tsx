@@ -322,7 +322,7 @@ export default function Admin() {
       await fetch(`/api/prode/admin/users/${selected.id}`, { method: 'DELETE', headers: authHeaders })
       setModal(null)
       await fetchUsers()
-      showToast('Usuario eliminado')
+      showToast('Usuario desactivado (historial de pronósticos preservado)')
     } finally {
       setActionLoading(false)
     }

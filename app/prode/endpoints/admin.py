@@ -123,14 +123,14 @@ def update_prode_user(
 @router.delete(
     "/admin/users/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Eliminar usuario Prode",
+    summary="Desactivar usuario Prode (soft delete — preserva historial)",
     dependencies=[Depends(_require_admin)],
 )
 def delete_prode_user(user_id: uuid.UUID, db: Session = Depends(get_db)) -> None:
     user = db.query(ProdeUser).filter(ProdeUser.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
-    db.delete(user)
+    user.activo = False
     db.commit()
 
 

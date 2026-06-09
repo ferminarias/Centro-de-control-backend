@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Flags from 'country-flag-icons/react/3x2'
 import NodisWidget, { type NodisPartidoContext } from '../components/NodisWidget'
@@ -105,6 +105,65 @@ function formatFecha(iso: string, tz: string = DEFAULT_TZ) {
   }
 }
 
+// ── SSE hook ─────────────────────────────────────────────────────────────────
+
+/**
+ * Connects to /api/prode/events and calls onEvent for each server push.
+ * Uses fetch + ReadableStream (not EventSource) so we can send the Authorization header.
+ * Auto-reconnects with 5 s backoff on network failures.
+ */
+function useProdeSSE(onEvent: (event: string) => void) {
+  const cbRef = useRef(onEvent)
+  useEffect(() => { cbRef.current = onEvent })
+
+  useEffect(() => {
+    let cancelled = false
+    const controller = new AbortController()
+
+    async function connect() {
+      const token = localStorage.getItem('prode_token')
+      if (!token || cancelled) return
+      try {
+        const res = await fetch('/api/prode/events', {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        })
+        if (!res.ok || !res.body) throw new Error('SSE response not ok')
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+
+        while (!cancelled) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const parts = buf.split('\n\n')
+          buf = parts.pop() ?? ''
+          for (const part of parts) {
+            const line = part.split('\n').find(l => l.startsWith('data: '))
+            if (!line) continue
+            try {
+              const msg = JSON.parse(line.slice(6))
+              if (msg.event) cbRef.current(msg.event)
+            } catch { /* ignore malformed */ }
+          }
+        }
+      } catch (err: unknown) {
+        if (cancelled || (err instanceof Error && err.name === 'AbortError')) return
+        // Reconnect after 5 s
+        setTimeout(() => { if (!cancelled) connect() }, 5000)
+      }
+    }
+
+    connect()
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -116,6 +175,15 @@ export default function Dashboard() {
   const [nodisContext, setNodisContext] = useState<NodisPartidoContext | null>(null)
   const [tz, setTzState] = useState(() => localStorage.getItem('prode_tz') || DEFAULT_TZ)
   const [tzOpen, setTzOpen] = useState(false)
+
+  // SSE-triggered update timestamps — passed as deps to child components
+  const [lastFixtureUpdate, setLastFixtureUpdate] = useState(0)
+  const [lastTablaUpdate, setLastTablaUpdate] = useState(0)
+
+  useProdeSSE((event) => {
+    if (event === 'fixture_updated') setLastFixtureUpdate(Date.now())
+    if (event === 'tabla_updated') setLastTablaUpdate(Date.now())
+  })
 
 
   function setTz(newTz: string) {
@@ -308,10 +376,10 @@ export default function Dashboard() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
-          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} onNodis={openNodis} />}
-          {active === 'fixture' && <FixtureContent user={user} tz={tz} onNodis={openNodis} />}
+          {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} onNodis={openNodis} lastFixtureUpdate={lastFixtureUpdate} lastTablaUpdate={lastTablaUpdate} />}
+          {active === 'fixture' && <FixtureContent user={user} tz={tz} onNodis={openNodis} lastUpdate={lastFixtureUpdate} />}
           {active === 'mis-pronos' && <MisPronosContent user={user} tz={tz} />}
-          {active === 'posiciones' && <TablaContent user={user} />}
+          {active === 'posiciones' && <TablaContent user={user} lastUpdate={lastTablaUpdate} />}
           {active === 'mi-equipo' && <EquipoContent user={user} />}
         </main>
       </div>
@@ -352,22 +420,36 @@ export default function Dashboard() {
 
 // ── Home ──────────────────────────────────────────────────────────────────────
 
-function HomeContent({ user, onNavigate, tz, onNodis }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string; onNodis?: (p: Partido) => void }) {
+function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTablaUpdate }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string; onNodis?: (p: Partido) => void; lastFixtureUpdate: number; lastTablaUpdate: number }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [tabla, setTabla] = useState<TablaEntry[]>([])
   const token = localStorage.getItem('prode_token')
   const headers = { Authorization: `Bearer ${token}` }
 
-  const fetchAll = useCallback(() => {
+  const fetchPartidos = useCallback(() => {
     fetch('/api/prode/partidos', { headers }).then(r => r.json()).then(setPartidos).catch(() => {})
+  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchTabla = useCallback(() => {
     fetch('/api/prode/tabla', { headers }).then(r => r.json()).then(setTabla).catch(() => {})
-  }, [token])
+  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initial load + polling fallback (2 min)
+  useEffect(() => {
+    fetchPartidos()
+    const id = setInterval(fetchPartidos, 2 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [fetchPartidos])
 
   useEffect(() => {
-    fetchAll()
-    const id = setInterval(fetchAll, 5 * 60 * 1000)
+    fetchTabla()
+    const id = setInterval(fetchTabla, 2 * 60 * 1000)
     return () => clearInterval(id)
-  }, [fetchAll])
+  }, [fetchTabla])
+
+  // SSE-triggered immediate refetch
+  useEffect(() => { if (lastFixtureUpdate) fetchPartidos() }, [lastFixtureUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (lastTablaUpdate) fetchTabla() }, [lastTablaUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const ahora = new Date()
   const enVivo = partidos.filter(p => p.estado === 'en_juego')
@@ -578,9 +660,10 @@ function PartidoCardCompact({ partido, tz, onNodis }: { partido: Partido; tz: st
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
-function FixtureContent({ tz, onNodis }: { user: ProdeUser; tz: string; onNodis?: (p: Partido) => void }) {
+function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: string; onNodis?: (p: Partido) => void; lastUpdate: number }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [grupoActivo, setGrupoActivo] = useState<string | 'eliminatorias'>('A')
   const [toast, setToast] = useState('')
   const token = localStorage.getItem('prode_token')
@@ -595,33 +678,49 @@ function FixtureContent({ tz, onNodis }: { user: ProdeUser; tz: string; onNodis?
       const res = await fetch('/api/prode/partidos', {
         headers: { Authorization: `Bearer ${token}` },
       })
+      if (!res.ok) throw new Error('bad response')
       const data = await res.json()
       setPartidos(Array.isArray(data) ? data : [])
+      setFetchError(false)
+    } catch {
+      setFetchError(true)
     } finally {
       setLoading(false)
     }
   }, [token])
 
-  // Auto-refresh every 5 minutes — backend auto-sync keeps DB fresh
+  // Initial load + polling fallback (2 min — SSE is primary)
   useEffect(() => {
     fetchPartidos()
-    const id = setInterval(fetchPartidos, 5 * 60 * 1000)
+    const id = setInterval(fetchPartidos, 2 * 60 * 1000)
     return () => clearInterval(id)
   }, [fetchPartidos])
 
+  // SSE-triggered immediate refetch
+  useEffect(() => { if (lastUpdate) fetchPartidos() }, [lastUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
+
   async function savePred(partidoId: number, gl: number, gv: number) {
-    const res = await fetch('/api/prode/predicciones', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ partido_id: partidoId, goles_local: gl, goles_visitante: gv }),
-    })
-    if (!res.ok) {
-      const d = await res.json()
-      showToast(d.detail || 'Error al guardar')
-      return
+    try {
+      const res = await fetch('/api/prode/predicciones', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partido_id: partidoId, goles_local: gl, goles_visitante: gv }),
+        signal: AbortSignal.timeout(10_000),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        showToast(d.detail || 'Error al guardar')
+        return
+      }
+      showToast('Pronóstico guardado ✓')
+      fetchPartidos()
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'TimeoutError') {
+        showToast('Tiempo de espera agotado. Intentá de nuevo.')
+      } else {
+        showToast('Error de conexión. Revisá tu red.')
+      }
     }
-    showToast('Pronóstico guardado ✓')
-    fetchPartidos()
   }
 
   const isEliminatoria = (fase: string) => fase !== 'grupo'
@@ -643,8 +742,18 @@ function FixtureContent({ tz, onNodis }: { user: ProdeUser; tz: string; onNodis?
   if (partidos.length === 0) {
     return (
       <div className="card p-10 text-center">
-        <p className="text-content-secondary text-sm">El fixture aún no está disponible.</p>
-        <p className="text-content-muted text-xs mt-1">El administrador debe sincronizar desde football-data.org.</p>
+        {fetchError ? (
+          <>
+            <p className="text-red-400 text-sm font-medium">Error al cargar el fixture</p>
+            <p className="text-content-muted text-xs mt-1">Revisá tu conexión e intentá recargar la página.</p>
+            <button onClick={fetchPartidos} className="mt-4 text-xs text-accent hover:underline">Reintentar</button>
+          </>
+        ) : (
+          <>
+            <p className="text-content-secondary text-sm">El fixture aún no está disponible.</p>
+            <p className="text-content-muted text-xs mt-1">El administrador debe sincronizar desde football-data.org.</p>
+          </>
+        )}
       </div>
     )
   }
@@ -782,6 +891,8 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
   const kickoff = new Date(partido.fecha)
   const cutoff = new Date(kickoff.getTime() - LOCK_MINUTES * 60 * 1000)
   const cerrado = partido.estado !== 'programado' || cutoff <= ahora
+  const esPostergado = partido.estado === 'postergado'
+  const esCancelado = partido.estado === 'cancelado'
   const yaPronosticado = pred !== null
   const minuto = useLiveMinute(partido.fecha, partido.estado)
 
@@ -797,12 +908,15 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
 
   async function handleSave() {
     setSaving(true)
-    await onSave(partido.id, gl, gv)
-    setSaving(false)
+    try {
+      await onSave(partido.id, gl, gv)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
-    <div className={`px-4 py-4 flex items-center gap-3 ${partido.estado === 'en_juego' ? 'bg-status-draw/5' : ''}`}>
+    <div className={`px-4 py-4 flex items-center gap-3 ${partido.estado === 'en_juego' ? 'bg-status-draw/5' : ''} ${esPostergado || esCancelado ? 'opacity-50' : ''}`}>
       {/* Fecha / minuto */}
       <div className="w-20 shrink-0 hidden sm:block text-center">
         {partido.estado === 'en_juego' ? (
@@ -861,6 +975,10 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
               <p className="text-[10px] text-content-muted">sin pronós.</p>
             )}
           </>
+        ) : esPostergado ? (
+          <span className="text-[11px] font-semibold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">Postergado</span>
+        ) : esCancelado ? (
+          <span className="text-[11px] font-semibold text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full">Cancelado</span>
         ) : cerrado && yaPronosticado ? (
           // Locked — show prediction, no edit
           <div className="flex flex-col items-center gap-0.5">
@@ -931,13 +1049,15 @@ function ScoreInput({ value, onChange, disabled }: { value: number; onChange: (v
       <button
         onClick={() => onChange(Math.min(99, value + 1))}
         disabled={disabled}
-        className="w-5 h-4 flex items-center justify-center text-content-muted hover:text-content-primary disabled:opacity-30 text-[10px] leading-none"
+        className="w-8 h-8 flex items-center justify-center text-content-muted hover:text-content-primary disabled:opacity-30 text-xs leading-none rounded"
+        aria-label="Aumentar goles"
       >▲</button>
-      <span className="text-base font-semibold text-content-primary tabular-nums w-5 text-center">{value}</span>
+      <span className="text-base font-semibold text-content-primary tabular-nums w-8 text-center">{value}</span>
       <button
         onClick={() => onChange(Math.max(0, value - 1))}
         disabled={disabled}
-        className="w-5 h-4 flex items-center justify-center text-content-muted hover:text-content-primary disabled:opacity-30 text-[10px] leading-none"
+        className="w-8 h-8 flex items-center justify-center text-content-muted hover:text-content-primary disabled:opacity-30 text-xs leading-none rounded"
+        aria-label="Disminuir goles"
       >▼</button>
     </div>
   )
@@ -1087,7 +1207,7 @@ interface ClubTablaEntry {
   total_puntos: number
 }
 
-function TablaContent({ user }: { user: ProdeUser }) {
+function TablaContent({ user, lastUpdate }: { user: ProdeUser; lastUpdate: number }) {
   const [tab, setTab] = useState<'individual' | 'equipos'>('individual')
   const [tabla, setTabla] = useState<TablaEntry[]>([])
   const [tablaEquipos, setTablaEquipos] = useState<ClubTablaEntry[]>([])
@@ -1095,12 +1215,22 @@ function TablaContent({ user }: { user: ProdeUser }) {
   const [loadingEquipos, setLoadingEquipos] = useState(false)
   const token = localStorage.getItem('prode_token')
 
-  useEffect(() => {
+  const fetchTabla = useCallback(() => {
     fetch('/api/prode/tabla', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(setTabla)
       .finally(() => setLoading(false))
-  }, [])
+  }, [token])
+
+  // Initial load + polling fallback (2 min)
+  useEffect(() => {
+    fetchTabla()
+    const id = setInterval(fetchTabla, 2 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [fetchTabla])
+
+  // SSE-triggered immediate refetch
+  useEffect(() => { if (lastUpdate) fetchTabla() }, [lastUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (tab !== 'equipos') return
@@ -1123,7 +1253,7 @@ function TablaContent({ user }: { user: ProdeUser }) {
     <div className="flex flex-col gap-4 animate-slide-up">
       <div>
         <h1 className="text-xl font-semibold text-content-primary">Tabla de Posiciones</h1>
-        <p className="text-sm text-content-secondary mt-0.5">{tabla.length} participantes · 5 pts exacto · 3 pts resultado</p>
+        <p className="text-sm text-content-secondary mt-0.5">{tabla.length} participantes · 5 pts exacto · 3 pts resultado · desempate: exactos → resultados</p>
       </div>
 
       {/* Tabs */}

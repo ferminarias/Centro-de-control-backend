@@ -128,61 +128,71 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="label">Nombre</label>
+              <label htmlFor="reg-nombre" className="label">Nombre</label>
               <input
+                id="reg-nombre"
                 className="input-field"
                 placeholder="Juan"
                 value={form.nombre}
                 onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
                 required
                 autoFocus
+                autoComplete="given-name"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="label">Apellido</label>
+              <label htmlFor="reg-apellido" className="label">Apellido</label>
               <input
+                id="reg-apellido"
                 className="input-field"
                 placeholder="Pérez"
                 value={form.apellido}
                 onChange={e => setForm(f => ({ ...f, apellido: e.target.value }))}
                 required
+                autoComplete="family-name"
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="label">Email</label>
+            <label htmlFor="reg-email" className="label">Email</label>
             <input
+              id="reg-email"
               className="input-field"
               type="email"
               placeholder="juan@ejemplo.com"
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
               required
+              autoComplete="email"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="label">Contraseña</label>
+            <label htmlFor="reg-password" className="label">Contraseña</label>
             <input
+              id="reg-password"
               className="input-field"
               type="password"
               placeholder="Mínimo 8 caracteres"
               value={form.password}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               required
+              autoComplete="new-password"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="label">Confirmar contraseña</label>
+            <label htmlFor="reg-confirm" className="label">Confirmar contraseña</label>
             <input
+              id="reg-confirm"
               className="input-field"
               type="password"
               placeholder="Repetí la contraseña"
               value={form.confirm}
               onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
               required
+              autoComplete="new-password"
             />
           </div>
 
