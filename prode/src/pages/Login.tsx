@@ -1,3 +1,4 @@
+import { API } from '../lib/api'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGoogleLogin } from '@react-oauth/google'
@@ -17,7 +18,7 @@ export default function Login() {
     const token = localStorage.getItem('prode_token')
     if (!token) return
     // Validate token silently — if expired/invalid, stay on login
-    fetch('/api/prode/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(API + '/api/prode/auth/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => { if (r.ok) navigate('/dashboard', { replace: true }) })
       .catch(() => {})
   }, [])
@@ -29,7 +30,7 @@ export default function Login() {
       setGoogleLoading(true)
       setError('')
       try {
-        const res = await fetch('/api/prode/auth/google-token', {
+        const res = await fetch(API + '/api/prode/auth/google-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ access_token: tokenResponse.access_token }),
@@ -56,7 +57,7 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch('/api/prode/auth/login', {
+      const res = await fetch(API + '/api/prode/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

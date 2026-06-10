@@ -1,3 +1,4 @@
+import { API } from '../lib/api'
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 
@@ -13,7 +14,7 @@ export default function Register() {
 
   useEffect(() => {
     if (!token) { setStep('invalid'); return }
-    fetch(`/api/prode/auth/invitacion/${token}`)
+    fetch(API + `/api/prode/auth/invitacion/${token}`)
       .then(r => r.ok ? setStep('form') : setStep('invalid'))
       .catch(() => setStep('invalid'))
   }, [token])
@@ -37,7 +38,7 @@ export default function Register() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/prode/auth/registro', {
+      const res = await fetch(API + '/api/prode/auth/registro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

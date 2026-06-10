@@ -1,3 +1,4 @@
+import { API } from '../lib/api'
 import { useEffect, useRef, useState } from 'react'
 
 export interface NodisPartidoContext {
@@ -83,7 +84,7 @@ export default function NodisWidget({ open, onClose, partidoContext, onClearCont
     const lastMsg = currentMessages[currentMessages.length - 1]
 
     try {
-      const res = await fetch('/api/prode/nodis/chat', {
+      const res = await fetch(API + '/api/prode/nodis/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({

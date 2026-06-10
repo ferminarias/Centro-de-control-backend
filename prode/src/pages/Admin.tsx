@@ -1,3 +1,4 @@
+import { API } from '../lib/api'
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -78,7 +79,7 @@ export default function Admin() {
   const fetchUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/prode/admin/users', { headers: authHeaders })
+      const res = await fetch(API + '/api/prode/admin/users', { headers: authHeaders })
       if (res.status === 403) { navigate('/dashboard'); return }
       setUsers(await res.json())
     } finally {
@@ -89,7 +90,7 @@ export default function Admin() {
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
   useEffect(() => {
-    fetch('/api/prode/partidos', { headers: authHeaders })
+    fetch(API + '/api/prode/partidos', { headers: authHeaders })
       .then(r => r.json())
       .then((data: PartidoSimple[]) => setPartidos(Array.isArray(data) ? data : []))
       .catch(() => {})
@@ -97,14 +98,14 @@ export default function Admin() {
 
   const fetchInvitaciones = useCallback(async () => {
     try {
-      const res = await fetch('/api/prode/admin/invitaciones', { headers: authHeaders })
+      const res = await fetch(API + '/api/prode/admin/invitaciones', { headers: authHeaders })
       if (res.ok) setInvitaciones(await res.json())
     } catch {}
   }, []) // eslint-disable-line
 
   const fetchPendientes = useCallback(async () => {
     try {
-      const res = await fetch('/api/prode/admin/pendientes', { headers: authHeaders })
+      const res = await fetch(API + '/api/prode/admin/pendientes', { headers: authHeaders })
       if (res.ok) setPendientes(await res.json())
     } catch {}
   }, []) // eslint-disable-line
@@ -117,7 +118,7 @@ export default function Admin() {
   async function generarInvitacion() {
     setInvLoading(true)
     try {
-      const res = await fetch('/api/prode/admin/invitaciones', { method: 'POST', headers: authHeaders })
+      const res = await fetch(API + '/api/prode/admin/invitaciones', { method: 'POST', headers: authHeaders })
       if (!res.ok) throw new Error()
       await fetchInvitaciones()
       showToast('Link de invitación generado')
@@ -130,7 +131,7 @@ export default function Admin() {
 
   async function revocarInvitacion(token: string) {
     try {
-      await fetch(`/api/prode/admin/invitaciones/${token}`, { method: 'DELETE', headers: authHeaders })
+      await fetch(API + `/api/prode/admin/invitaciones/${token}`, { method: 'DELETE', headers: authHeaders })
       await fetchInvitaciones()
       showToast('Link revocado')
     } catch {
@@ -149,7 +150,7 @@ export default function Admin() {
   async function aceptarRegistro(id: string) {
     setPendientesLoading(true)
     try {
-      const res = await fetch(`/api/prode/admin/pendientes/${id}/aceptar`, { method: 'POST', headers: authHeaders })
+      const res = await fetch(API + `/api/prode/admin/pendientes/${id}/aceptar`, { method: 'POST', headers: authHeaders })
       if (!res.ok) {
         const d = await res.json()
         showToast(d.detail || 'Error al aceptar')
@@ -168,7 +169,7 @@ export default function Admin() {
   async function rechazarRegistro(id: string) {
     setPendientesLoading(true)
     try {
-      await fetch(`/api/prode/admin/pendientes/${id}/rechazar`, { method: 'POST', headers: authHeaders })
+      await fetch(API + `/api/prode/admin/pendientes/${id}/rechazar`, { method: 'POST', headers: authHeaders })
       await fetchPendientes()
       showToast('Solicitud rechazada')
     } catch {
@@ -182,7 +183,7 @@ export default function Admin() {
     if (!simPartidoId) return
     setSimLoading(true)
     try {
-      const res = await fetch(`/api/prode/admin/partidos/${simPartidoId}/simular`, {
+      const res = await fetch(API + `/api/prode/admin/partidos/${simPartidoId}/simular`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ goles_local: simGl, goles_visitante: simGv }),
@@ -200,7 +201,7 @@ export default function Admin() {
     if (!simPartidoId) return
     setSimLoading(true)
     try {
-      const res = await fetch(`/api/prode/admin/partidos/${simPartidoId}/finalizar`, {
+      const res = await fetch(API + `/api/prode/admin/partidos/${simPartidoId}/finalizar`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ goles_local: simGl, goles_visitante: simGv }),
@@ -219,7 +220,7 @@ export default function Admin() {
     if (!simPartidoId) return
     setSimLoading(true)
     try {
-      await fetch(`/api/prode/admin/partidos/${simPartidoId}/resetear`, {
+      await fetch(API + `/api/prode/admin/partidos/${simPartidoId}/resetear`, {
         method: 'PATCH',
         headers: authHeaders,
       })
@@ -234,7 +235,7 @@ export default function Admin() {
   async function createUser() {
     setActionLoading(true)
     try {
-      const res = await fetch('/api/prode/admin/users', {
+      const res = await fetch(API + '/api/prode/admin/users', {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({ ...form, password: DEFAULT_PASSWORD }),
@@ -258,7 +259,7 @@ export default function Admin() {
     if (!selected) return
     setActionLoading(true)
     try {
-      const res = await fetch(`/api/prode/admin/users/${selected.id}`, {
+      const res = await fetch(API + `/api/prode/admin/users/${selected.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ new_password: DEFAULT_PASSWORD }),
@@ -276,7 +277,7 @@ export default function Admin() {
 
   async function toggleActive(user: ProdeUser) {
     try {
-      await fetch(`/api/prode/admin/users/${user.id}`, {
+      await fetch(API + `/api/prode/admin/users/${user.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ activo: !user.activo }),
@@ -290,7 +291,7 @@ export default function Admin() {
 
   async function toggleAdmin(user: ProdeUser) {
     try {
-      await fetch(`/api/prode/admin/users/${user.id}`, {
+      await fetch(API + `/api/prode/admin/users/${user.id}`, {
         method: 'PATCH',
         headers: authHeaders,
         body: JSON.stringify({ is_admin: !user.is_admin }),
@@ -305,7 +306,7 @@ export default function Admin() {
   async function syncFixtures() {
     setSyncing(true)
     try {
-      const res = await fetch('/api/prode/admin/sync', { method: 'POST', headers: authHeaders })
+      const res = await fetch(API + '/api/prode/admin/sync', { method: 'POST', headers: authHeaders })
       if (!res.ok) {
         const d = await res.json()
         showToast(d.detail || 'Error al sincronizar')
@@ -324,7 +325,7 @@ export default function Admin() {
     if (!selected) return
     setActionLoading(true)
     try {
-      await fetch(`/api/prode/admin/users/${selected.id}`, { method: 'DELETE', headers: authHeaders })
+      await fetch(API + `/api/prode/admin/users/${selected.id}`, { method: 'DELETE', headers: authHeaders })
       setModal(null)
       await fetchUsers()
       showToast('Usuario desactivado (historial de pronósticos preservado)')
@@ -334,7 +335,7 @@ export default function Admin() {
   }
 
   useEffect(() => {
-    fetch('/api/prode/apuesta-ganador/equipos', { headers: authHeaders })
+    fetch(API + '/api/prode/apuesta-ganador/equipos', { headers: authHeaders })
       .then(r => r.json()).then(setEquiposAll).catch(() => {})
   }, []) // eslint-disable-line
 
@@ -342,7 +343,7 @@ export default function Admin() {
     if (!confirm('¿Resetear TODOS los puntos? Esto borrará los puntos de todas las predicciones y la apuesta ganador. Esta acción no se puede deshacer.')) return
     setResetLoading(true)
     try {
-      const res = await fetch('/api/prode/admin/reset-puntos', { method: 'POST', headers: authHeaders })
+      const res = await fetch(API + '/api/prode/admin/reset-puntos', { method: 'POST', headers: authHeaders })
       const d = await res.json()
       showToast(`Puntos reseteados · ${d.predicciones_reseteadas} predicciones · ${d.apuestas_reseteadas} apuestas`)
     } catch {
@@ -358,7 +359,7 @@ export default function Admin() {
     if (!confirm(`¿Declarar a ${equipo?.nombre} como campeón del mundial? Se otorgarán 25 pts a quienes apostaron por este equipo.`)) return
     setGanadorLoading(true)
     try {
-      const res = await fetch('/api/prode/admin/apuesta-ganador/resultado', {
+      const res = await fetch(API + '/api/prode/admin/apuesta-ganador/resultado', {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({ equipo_id: ganadorId }),

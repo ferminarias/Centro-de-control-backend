@@ -1,3 +1,4 @@
+import { API } from './lib/api'
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
@@ -17,7 +18,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!token) { setStatus('unauth'); return }
-    fetch('/api/prode/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(API + '/api/prode/auth/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => {
         if (!r.ok) { setStatus(r.status === 401 ? 'unauth' : 'forbidden'); return }
         return r.json()

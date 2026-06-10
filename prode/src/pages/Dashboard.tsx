@@ -1,3 +1,4 @@
+import { API } from '../lib/api'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Flags from 'country-flag-icons/react/3x2'
@@ -133,7 +134,7 @@ function useProdeSSE(onEvent: (event: string) => void) {
       const token = localStorage.getItem('prode_token')
       if (!token || cancelled) return
       try {
-        const res = await fetch('/api/prode/events', {
+        const res = await fetch(API + '/api/prode/events', {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         })
@@ -207,7 +208,7 @@ export default function Dashboard() {
     const token = localStorage.getItem('prode_token')
     if (!token) { navigate('/'); return }
 
-    fetch('/api/prode/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(API + '/api/prode/auth/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
       .then((data: ProdeUser) => {
         if (data.must_change_password) { navigate('/change-password'); return }
@@ -445,11 +446,11 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
   const ganadorCerrado = new Date() > DEADLINE_GANADOR
 
   const fetchPartidos = useCallback(() => {
-    fetch('/api/prode/partidos', { headers }).then(r => r.json()).then(setPartidos).catch(() => {})
+    fetch(API + '/api/prode/partidos', { headers }).then(r => r.json()).then(setPartidos).catch(() => {})
   }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchTabla = useCallback(() => {
-    fetch('/api/prode/tabla', { headers }).then(r => r.json()).then(setTabla).catch(() => {})
+    fetch(API + '/api/prode/tabla', { headers }).then(r => r.json()).then(setTabla).catch(() => {})
   }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load + polling fallback (2 min)
@@ -470,11 +471,11 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
   useEffect(() => { if (lastTablaUpdate) fetchTabla() }, [lastTablaUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    fetch('/api/prode/apuesta-ganador', { headers })
+    fetch(API + '/api/prode/apuesta-ganador', { headers })
       .then(r => r.ok ? r.json() : null)
       .then(d => { setApuestaGanador(d); if (d) setGanadorEquipoId(d.equipo_id) })
       .catch(() => setApuestaGanador(null))
-    fetch('/api/prode/apuesta-ganador/equipos', { headers })
+    fetch(API + '/api/prode/apuesta-ganador/equipos', { headers })
       .then(r => r.json()).then(setEquipos).catch(() => {})
   }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -482,7 +483,7 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
     if (!ganadorEquipoId) return
     setGanadorSaving(true)
     try {
-      const res = await fetch('/api/prode/apuesta-ganador', {
+      const res = await fetch(API + '/api/prode/apuesta-ganador', {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ equipo_id: ganadorEquipoId }),
@@ -781,7 +782,7 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
 
   const fetchPartidos = useCallback(async () => {
     try {
-      const res = await fetch('/api/prode/partidos', {
+      const res = await fetch(API + '/api/prode/partidos', {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('bad response')
@@ -807,7 +808,7 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
 
   async function savePred(partidoId: number, gl: number, gv: number) {
     try {
-      const res = await fetch('/api/prode/predicciones', {
+      const res = await fetch(API + '/api/prode/predicciones', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ partido_id: partidoId, goles_local: gl, goles_visitante: gv }),
@@ -966,7 +967,7 @@ function CuadroContent({ tz, lastUpdate }: { tz: string; lastUpdate: number }) {
   const token = localStorage.getItem('prode_token')
 
   const fetchPartidos = useCallback(() => {
-    fetch('/api/prode/partidos', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(API + '/api/prode/partidos', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => setPartidos(Array.isArray(data) ? data : []))
       .catch(() => {})
@@ -1226,7 +1227,7 @@ function MisPronosContent({ tz }: { user: ProdeUser; tz: string }) {
   const token = localStorage.getItem('prode_token')
 
   useEffect(() => {
-    fetch('/api/prode/predicciones/me', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(API + '/api/prode/predicciones/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(setPreds)
       .finally(() => setLoading(false))
@@ -1370,7 +1371,7 @@ function TablaContent({ user, lastUpdate }: { user: ProdeUser; lastUpdate: numbe
   const token = localStorage.getItem('prode_token')
 
   const fetchTabla = useCallback(() => {
-    fetch('/api/prode/tabla', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(API + '/api/prode/tabla', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(setTabla)
       .finally(() => setLoading(false))
@@ -1389,7 +1390,7 @@ function TablaContent({ user, lastUpdate }: { user: ProdeUser; lastUpdate: numbe
   useEffect(() => {
     if (tab !== 'equipos') return
     setLoadingEquipos(true)
-    fetch('/api/prode/equipos/tabla', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(API + '/api/prode/equipos/tabla', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => setTablaEquipos(Array.isArray(data) ? data : []))
       .finally(() => setLoadingEquipos(false))
@@ -1574,7 +1575,7 @@ function EquipoContent({ user }: { user: ProdeUser }) {
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
 
   const fetchClub = useCallback(() => {
-    fetch('/api/prode/equipos/mi-equipo', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(API + '/api/prode/equipos/mi-equipo', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setClub(d ?? null))
       .catch(() => setClub(null))
@@ -1584,7 +1585,7 @@ function EquipoContent({ user }: { user: ProdeUser }) {
 
   useEffect(() => {
     if (!user.is_admin) return
-    fetch('/api/prode/admin/users', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(API + '/api/prode/admin/users', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(setAllUsers)
       .catch(() => {})
@@ -1593,7 +1594,7 @@ function EquipoContent({ user }: { user: ProdeUser }) {
   async function handleCreate() {
     if (!newNombre.trim()) return
     setSaving(true)
-    const res = await fetch('/api/prode/equipos', { method: 'POST', headers, body: JSON.stringify({ nombre: newNombre.trim() }) })
+    const res = await fetch(API + '/api/prode/equipos', { method: 'POST', headers, body: JSON.stringify({ nombre: newNombre.trim() }) })
     setSaving(false)
     if (res.ok) { setNewNombre(''); fetchClub(); showToast('Equipo creado ✓') }
     else { const d = await res.json(); showToast(d.detail || 'Error al crear') }
@@ -1602,7 +1603,7 @@ function EquipoContent({ user }: { user: ProdeUser }) {
   async function handleAddMember() {
     if (!addUserId || !club) return
     setSaving(true)
-    const res = await fetch(`/api/prode/equipos/${club.id}/miembros`, { method: 'POST', headers, body: JSON.stringify({ user_id: addUserId }) })
+    const res = await fetch(API + `/api/prode/equipos/${club.id}/miembros`, { method: 'POST', headers, body: JSON.stringify({ user_id: addUserId }) })
     setSaving(false)
     if (res.ok) { setAddUserId(''); fetchClub(); showToast('Miembro agregado ✓') }
     else { const d = await res.json(); showToast(d.detail || 'Error') }
@@ -1610,14 +1611,14 @@ function EquipoContent({ user }: { user: ProdeUser }) {
 
   async function handleRemoveMember(userId: string) {
     if (!club) return
-    const res = await fetch(`/api/prode/equipos/${club.id}/miembros/${userId}`, { method: 'DELETE', headers })
+    const res = await fetch(API + `/api/prode/equipos/${club.id}/miembros/${userId}`, { method: 'DELETE', headers })
     if (res.ok) { fetchClub(); showToast('Miembro eliminado') }
     else { const d = await res.json(); showToast(d.detail || 'Error') }
   }
 
   async function handleDisolve() {
     if (!club || !confirm(`¿Disolver el equipo "${club.nombre}"? Esta acción no se puede deshacer.`)) return
-    const res = await fetch(`/api/prode/equipos/${club.id}`, { method: 'DELETE', headers })
+    const res = await fetch(API + `/api/prode/equipos/${club.id}`, { method: 'DELETE', headers })
     if (res.ok) { setClub(null); showToast('Equipo disuelto') }
     else { const d = await res.json(); showToast(d.detail || 'Error') }
   }

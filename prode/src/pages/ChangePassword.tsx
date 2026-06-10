@@ -1,3 +1,4 @@
+import { API } from '../lib/api'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -29,7 +30,7 @@ export default function ChangePassword() {
     setLoading(true)
     try {
       const token = localStorage.getItem('prode_token')
-      const res = await fetch('/api/prode/auth/change-password', {
+      const res = await fetch(API + '/api/prode/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ current_password: current, new_password: next }),
