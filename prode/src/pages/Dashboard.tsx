@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Flags from 'country-flag-icons/react/3x2'
 import NodisWidget, { type NodisPartidoContext } from '../components/NodisWidget'
+import BracketView from '../components/BracketView'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,7 @@ const FASE_LABEL: Record<string, string> = {
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', Icon: IconGrid },
   { id: 'fixture', label: 'Fixture', Icon: IconCalendar },
+  { id: 'cuadro', label: 'Cuadro', Icon: IconBracket },
   { id: 'mis-pronos', label: 'Mis Pronósticos', Icon: IconPen },
   { id: 'posiciones', label: 'Posiciones', Icon: IconTrophy },
   { id: 'mi-equipo', label: 'Mi Equipo', Icon: IconTeam, gerenteOnly: true },
@@ -385,6 +387,7 @@ export default function Dashboard() {
         <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
           {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} onNodis={openNodis} lastFixtureUpdate={lastFixtureUpdate} lastTablaUpdate={lastTablaUpdate} />}
           {active === 'fixture' && <FixtureContent user={user} tz={tz} onNodis={openNodis} lastUpdate={lastFixtureUpdate} />}
+          {active === 'cuadro' && <CuadroContent tz={tz} lastUpdate={lastFixtureUpdate} />}
           {active === 'mis-pronos' && <MisPronosContent user={user} tz={tz} />}
           {active === 'posiciones' && <TablaContent user={user} lastUpdate={lastTablaUpdate} />}
           {active === 'mi-equipo' && <EquipoContent user={user} />}
@@ -951,6 +954,54 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
           {toast}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Cuadro (bracket eliminatorias) ────────────────────────────────────────────
+
+function CuadroContent({ tz, lastUpdate }: { tz: string; lastUpdate: number }) {
+  const [partidos, setPartidos] = useState<Partido[]>([])
+  const [loading, setLoading] = useState(true)
+  const token = localStorage.getItem('prode_token')
+
+  const fetchPartidos = useCallback(() => {
+    fetch('/api/prode/partidos', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setPartidos(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [token])
+
+  // Initial load + polling fallback (2 min — SSE is primary)
+  useEffect(() => {
+    fetchPartidos()
+    const id = setInterval(fetchPartidos, 2 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [fetchPartidos])
+
+  // SSE-triggered immediate refetch
+  useEffect(() => { if (lastUpdate) fetchPartidos() }, [lastUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  const eliminatorias = partidos.filter(p => p.fase !== 'grupo')
+
+  return (
+    <div className="flex flex-col gap-4 animate-slide-up">
+      <div>
+        <h1 className="text-xl font-semibold text-content-primary">Cuadro final</h1>
+        <p className="text-sm text-content-secondary mt-0.5">
+          Eliminación directa · de la Ronda de 32 a la Final
+        </p>
+      </div>
+      <BracketView partidos={eliminatorias} tz={tz} />
     </div>
   )
 }
@@ -1728,6 +1779,15 @@ function IconCalendar({ active }: { active: boolean }) {
     <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
       <rect x="1.5" y="2.5" width="12" height="11" rx="2" stroke={c} strokeWidth="1.2" />
       <path d="M5 1.5v2M10 1.5v2M1.5 6h12" stroke={c} strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+function IconBracket({ active }: { active: boolean }) {
+  const c = active ? '#1946E3' : 'currentColor'
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+      <path d="M1.5 3h3M1.5 12h3M4.5 3v4.5M4.5 12V7.5M4.5 7.5h3" stroke={c} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13.5 3h-3M13.5 12h-3M10.5 3v4.5M10.5 12V7.5M10.5 7.5h-3" stroke={c} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
