@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.prode.auth import get_current_prode_user, hash_password
-from app.prode.models import ProdeEquipo, ProdePartido, ProdeUser
+from app.prode.models import ProdeApuestaGanador, ProdeEquipo, ProdePartido, ProdePrediccion, ProdeUser
 from app.prode.schemas import (
     ProdeCreateUserRequest,
     ProdeUpdateUserRequest,
@@ -264,3 +264,25 @@ def resetear_partido(
     partido.estado = "programado"
     db.commit()
     return {"ok": True, "partido_id": partido_id, "estado": "programado"}
+
+
+@router.post(
+    "/admin/reset-puntos",
+    summary="Resetear todos los puntos de predicciones y apuesta ganador",
+    dependencies=[Depends(_require_admin)],
+)
+def reset_todos_puntos(db: Session = Depends(get_db)) -> dict:
+    predicciones = db.query(ProdePrediccion).filter(ProdePrediccion.puntos.isnot(None)).all()
+    for p in predicciones:
+        p.puntos = None
+    apuestas = db.query(ProdeApuestaGanador).filter(ProdeApuestaGanador.puntos != 0).all()
+    for a in apuestas:
+        a.puntos = 0
+    db.commit()
+    try:
+        from app.prode import events as _events
+        _events.broadcast("tabla_updated")
+        _events.broadcast("fixture_updated")
+    except Exception:
+        pass
+    return {"predicciones_reseteadas": len(predicciones), "apuestas_reseteadas": len(apuestas)}

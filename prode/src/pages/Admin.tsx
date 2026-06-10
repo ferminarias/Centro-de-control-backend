@@ -61,6 +61,11 @@ export default function Admin() {
   const [pendientes, setPendientes] = useState<RegistroPendiente[]>([])
   const [pendientesLoading, setPendientesLoading] = useState(false)
 
+  const [resetLoading, setResetLoading] = useState(false)
+  const [equiposAll, setEquiposAll] = useState<{ id: number; nombre: string; codigo_iso: string }[]>([])
+  const [ganadorId, setGanadorId] = useState<number | ''>('')
+  const [ganadorLoading, setGanadorLoading] = useState(false)
+
   const token = localStorage.getItem('prode_token')
 
   const authHeaders = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
@@ -325,6 +330,45 @@ export default function Admin() {
       showToast('Usuario desactivado (historial de pronósticos preservado)')
     } finally {
       setActionLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetch('/api/prode/apuesta-ganador/equipos', { headers: authHeaders })
+      .then(r => r.json()).then(setEquiposAll).catch(() => {})
+  }, []) // eslint-disable-line
+
+  async function resetPuntos() {
+    if (!confirm('¿Resetear TODOS los puntos? Esto borrará los puntos de todas las predicciones y la apuesta ganador. Esta acción no se puede deshacer.')) return
+    setResetLoading(true)
+    try {
+      const res = await fetch('/api/prode/admin/reset-puntos', { method: 'POST', headers: authHeaders })
+      const d = await res.json()
+      showToast(`Puntos reseteados · ${d.predicciones_reseteadas} predicciones · ${d.apuestas_reseteadas} apuestas`)
+    } catch {
+      showToast('Error al resetear')
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
+  async function declararGanador() {
+    if (!ganadorId) return
+    const equipo = equiposAll.find(e => e.id === ganadorId)
+    if (!confirm(`¿Declarar a ${equipo?.nombre} como campeón del mundial? Se otorgarán 25 pts a quienes apostaron por este equipo.`)) return
+    setGanadorLoading(true)
+    try {
+      const res = await fetch('/api/prode/admin/apuesta-ganador/resultado', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ equipo_id: ganadorId }),
+      })
+      const d = await res.json()
+      showToast(`Campeón declarado: ${d.ganador} · ${d.acertaron} usuarios acertaron`)
+    } catch {
+      showToast('Error al declarar ganador')
+    } finally {
+      setGanadorLoading(false)
     }
   }
 
@@ -651,6 +695,54 @@ export default function Admin() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Apuesta Campeón — declarar ganador */}
+        <div className="mt-8">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">🏆</span>
+            <h2 className="text-sm font-semibold text-content-primary">Campeón del Mundial</h2>
+          </div>
+          <div className="card p-5 flex flex-col gap-4">
+            <p className="text-xs text-content-muted">Al declarar el campeón se otorgan automáticamente <span className="text-content-primary font-semibold">25 puntos</span> a todos los usuarios que apostaron por ese equipo. Se puede ejecutar más de una vez si hubo error.</p>
+            <div className="flex gap-2">
+              <select
+                value={ganadorId}
+                onChange={e => setGanadorId(e.target.value ? Number(e.target.value) : '')}
+                className="input-field flex-1 py-2"
+              >
+                <option value="">Seleccioná el campeón...</option>
+                {equiposAll.map(eq => (
+                  <option key={eq.id} value={eq.id}>{eq.nombre}</option>
+                ))}
+              </select>
+              <button
+                onClick={declararGanador}
+                disabled={ganadorLoading || !ganadorId}
+                className="bg-accent hover:bg-accent-hover text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-40 shrink-0"
+              >
+                {ganadorLoading ? 'Procesando...' : 'Declarar campeón'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Reset de puntos */}
+        <div className="mt-8">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-bold text-red-400 bg-red-400/10 border border-red-400/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Peligroso</span>
+            <h2 className="text-sm font-semibold text-content-primary">Resetear todos los puntos</h2>
+          </div>
+          <div className="card p-5">
+            <p className="text-xs text-content-muted mb-4">Pone en <span className="text-content-primary font-medium">null</span> los puntos de todas las predicciones y resetea a 0 los puntos de la apuesta ganador. Usalo solo si hubo un error en el cálculo. Las predicciones en sí <span className="text-content-primary font-medium">no se eliminan</span>.</p>
+            <button
+              onClick={resetPuntos}
+              disabled={resetLoading}
+              className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-40"
+            >
+              {resetLoading ? 'Reseteando...' : 'Resetear todos los puntos'}
+            </button>
           </div>
         </div>
       </main>

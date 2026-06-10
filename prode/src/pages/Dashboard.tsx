@@ -59,6 +59,13 @@ interface TablaEntry {
   predicciones: number
 }
 
+interface ApuestaGanador {
+  equipo_id: number
+  equipo: Equipo
+  puntos: number
+  updated_at: string
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const GRUPOS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
@@ -423,8 +430,16 @@ export default function Dashboard() {
 function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTablaUpdate }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string; onNodis?: (p: Partido) => void; lastFixtureUpdate: number; lastTablaUpdate: number }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [tabla, setTabla] = useState<TablaEntry[]>([])
+  const [apuestaGanador, setApuestaGanador] = useState<ApuestaGanador | null | undefined>(undefined)
+  const [equipos, setEquipos] = useState<Equipo[]>([])
+  const [ganadorEquipoId, setGanadorEquipoId] = useState<number | ''>('')
+  const [ganadorSaving, setGanadorSaving] = useState(false)
+  const [ganadorToast, setGanadorToast] = useState('')
   const token = localStorage.getItem('prode_token')
   const headers = { Authorization: `Bearer ${token}` }
+
+  const DEADLINE_GANADOR = new Date('2026-06-15T23:59:59Z')
+  const ganadorCerrado = new Date() > DEADLINE_GANADOR
 
   const fetchPartidos = useCallback(() => {
     fetch('/api/prode/partidos', { headers }).then(r => r.json()).then(setPartidos).catch(() => {})
@@ -450,6 +465,40 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
   // SSE-triggered immediate refetch
   useEffect(() => { if (lastFixtureUpdate) fetchPartidos() }, [lastFixtureUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (lastTablaUpdate) fetchTabla() }, [lastTablaUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetch('/api/prode/apuesta-ganador', { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setApuestaGanador(d); if (d) setGanadorEquipoId(d.equipo_id) })
+      .catch(() => setApuestaGanador(null))
+    fetch('/api/prode/apuesta-ganador/equipos', { headers })
+      .then(r => r.json()).then(setEquipos).catch(() => {})
+  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function guardarApuestaGanador() {
+    if (!ganadorEquipoId) return
+    setGanadorSaving(true)
+    try {
+      const res = await fetch('/api/prode/apuesta-ganador', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ equipo_id: ganadorEquipoId }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        setGanadorToast(d.detail || 'Error al guardar')
+      } else {
+        const d = await res.json()
+        setApuestaGanador(d)
+        setGanadorToast('Apuesta guardada ✓')
+      }
+    } catch {
+      setGanadorToast('Error de conexión')
+    } finally {
+      setGanadorSaving(false)
+      setTimeout(() => setGanadorToast(''), 3000)
+    }
+  }
 
   const ahora = new Date()
   const enVivo = partidos.filter(p => p.estado === 'en_juego')
@@ -496,6 +545,60 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
           </div>
         ))}
       </div>
+
+      {/* Apuesta Ganador Mundial */}
+      {apuestaGanador !== undefined && (
+        <div className="card p-4 border-accent/25">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">🏆</span>
+            <p className="text-sm font-semibold text-content-primary">Campeón del Mundial</p>
+            <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-accent/10 text-accent">25 pts</span>
+          </div>
+
+          {ganadorCerrado ? (
+            <div>
+              <p className="text-xs text-content-muted mb-2">Plazo cerrado · 15 de junio</p>
+              {apuestaGanador ? (
+                <div className="flex items-center gap-2">
+                  <Flag codigo={apuestaGanador.equipo.codigo_iso} className="w-5 rounded-sm shrink-0" />
+                  <span className="text-sm font-semibold text-content-primary">{apuestaGanador.equipo.nombre}</span>
+                  {apuestaGanador.puntos > 0 && (
+                    <span className="ml-auto text-xs font-bold text-emerald-400">+{apuestaGanador.puntos} pts</span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-content-muted">No realizaste esta apuesta.</p>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-content-muted">
+                {apuestaGanador ? `Tu apuesta: ${apuestaGanador.equipo.nombre} · podés cambiarla hasta el 15/06` : 'Apostá al campeón antes del 15 de junio'}
+              </p>
+              <div className="flex gap-2">
+                <select
+                  value={ganadorEquipoId}
+                  onChange={e => setGanadorEquipoId(Number(e.target.value))}
+                  className="input-field flex-1 py-2"
+                >
+                  <option value="">Elegí un equipo</option>
+                  {equipos.map(eq => (
+                    <option key={eq.id} value={eq.id}>{eq.nombre}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={guardarApuestaGanador}
+                  disabled={ganadorSaving || !ganadorEquipoId}
+                  className="bg-accent hover:bg-accent-hover text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-40 shrink-0"
+                >
+                  {ganadorSaving ? '...' : 'Apostar'}
+                </button>
+              </div>
+              {ganadorToast && <p className="text-xs text-emerald-400">{ganadorToast}</p>}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Próximos partidos */}
       {proximos.length > 0 && (

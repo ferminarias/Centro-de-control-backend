@@ -186,6 +186,37 @@ class RegistroPendienteResponse(BaseModel):
     created_at: datetime
 
 
+# ── Apuesta Ganador Mundial ───────────────────────────────────────────────────
+
+class ApuestaGanadorRequest(BaseModel):
+    equipo_id: int
+
+
+class ApuestaGanadorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: uuid.UUID
+    equipo_id: int
+    equipo: EquipoResponse
+    puntos: int
+    updated_at: datetime
+
+
+class GanadorMundialRequest(BaseModel):
+    equipo_id: int
+
+
+class ApuestaGanadorAdminEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: uuid.UUID
+    nombre: str
+    apellido: str
+    equipo_id: int
+    equipo: EquipoResponse
+    puntos: int
+
+
 # ── Sync ──────────────────────────────────────────────────────────────────────
 
 class SyncResponse(BaseModel):

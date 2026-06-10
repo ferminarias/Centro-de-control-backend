@@ -134,3 +134,19 @@ class ProdePrediccion(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "partido_id", name="uq_prediccion_user_partido"),
     )
+
+
+class ProdeApuestaGanador(Base):
+    __tablename__ = "prode_apuestas_ganador"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("prode_users.id", ondelete="CASCADE"), primary_key=True
+    )
+    equipo_id: Mapped[int] = mapped_column(Integer, ForeignKey("prode_equipos.id"), nullable=False)
+    puntos: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    equipo: Mapped["ProdeEquipo"] = relationship("ProdeEquipo", foreign_keys=[equipo_id], lazy="joined")

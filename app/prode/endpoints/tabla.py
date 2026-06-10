@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.prode.auth import get_current_prode_user
-from app.prode.models import ProdePrediccion, ProdeUser
+from app.prode.models import ProdeApuestaGanador, ProdePrediccion, ProdeUser
 from app.prode.schemas import TablaEntry
 
 router = APIRouter(tags=["Prode - Tabla"])
@@ -15,26 +15,27 @@ def get_tabla(
     db: Session = Depends(get_db),
     _: ProdeUser = Depends(get_current_prode_user),
 ) -> list[TablaEntry]:
+    puntos_predicciones = func.coalesce(func.sum(ProdePrediccion.puntos), 0)
+    puntos_ganador = func.coalesce(func.max(ProdeApuestaGanador.puntos), 0)
+    total_puntos = (puntos_predicciones + puntos_ganador).label("puntos")
+
     rows = (
         db.query(
             ProdeUser.id,
             ProdeUser.nombre,
             ProdeUser.apellido,
             ProdeUser.avatar_url,
-            func.coalesce(func.sum(ProdePrediccion.puntos), 0).label("puntos"),
+            total_puntos,
             func.count(ProdePrediccion.id).label("predicciones"),
-            func.sum(
-                case((ProdePrediccion.puntos == 5, 1), else_=0)
-            ).label("exactos"),
-            func.sum(
-                case((ProdePrediccion.puntos == 3, 1), else_=0)
-            ).label("resultados"),
+            func.sum(case((ProdePrediccion.puntos == 5, 1), else_=0)).label("exactos"),
+            func.sum(case((ProdePrediccion.puntos == 3, 1), else_=0)).label("resultados"),
         )
         .outerjoin(ProdePrediccion, ProdePrediccion.user_id == ProdeUser.id)
+        .outerjoin(ProdeApuestaGanador, ProdeApuestaGanador.user_id == ProdeUser.id)
         .filter(ProdeUser.activo.is_(True))
         .group_by(ProdeUser.id, ProdeUser.nombre, ProdeUser.apellido, ProdeUser.avatar_url)
         .order_by(
-            func.coalesce(func.sum(ProdePrediccion.puntos), 0).desc(),
+            total_puntos.desc(),
             func.sum(case((ProdePrediccion.puntos == 5, 1), else_=0)).desc(),
             func.sum(case((ProdePrediccion.puntos == 3, 1), else_=0)).desc(),
         )
