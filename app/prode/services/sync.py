@@ -360,7 +360,28 @@ def get_live_matches_from_api(api_key: str) -> list[dict]:
                 params={"season": 2026, "status": "IN_PLAY,PAUSED"},
             )
             resp.raise_for_status()
-        data = resp.json().get("matches", [])
+            data = resp.json().get("matches", [])
+
+            # El endpoint de lista a veces no incluye "minute": completarlo
+            # desde el detalle del partido (máx. 4 requests por ciclo de cache,
+            # queda holgado dentro de las 10 req/min del plan)
+            for m in data[:4]:
+                if m.get("minute") is None and m.get("id"):
+                    try:
+                        det = client.get(
+                            f"{FOOTBALL_DATA_URL}/matches/{m['id']}",
+                            headers={"X-Auth-Token": api_key},
+                        ).json()
+                        m["minute"] = det.get("minute") or (det.get("match") or {}).get("minute")
+                    except Exception:
+                        pass
+
+        if data:
+            logger.info(
+                "Live sync: %d en juego — ej: id=%s minute=%s score=%s",
+                len(data), data[0].get("id"), data[0].get("minute"),
+                (data[0].get("score") or {}).get("fullTime"),
+            )
     except Exception as exc:
         logger.warning("Live sync API error: %s", exc)
         data = []
