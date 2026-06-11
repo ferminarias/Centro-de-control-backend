@@ -491,6 +491,7 @@ export default function Dashboard() {
 
 function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTablaUpdate }: { user: ProdeUser; onNavigate: (id: string) => void; tz: string; onNodis?: (p: Partido) => void; lastFixtureUpdate: number; lastTablaUpdate: number }) {
   const [partidos, setPartidos] = useState<Partido[]>([])
+  const [partidosLoaded, setPartidosLoaded] = useState(false)
   const [tabla, setTabla] = useState<TablaEntry[]>([])
   const [apuestaGanador, setApuestaGanador] = useState<ApuestaGanador | null | undefined>(undefined)
   const [equipos, setEquipos] = useState<Equipo[]>([])
@@ -504,7 +505,14 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
   const ganadorCerrado = new Date() > DEADLINE_GANADOR
 
   const fetchPartidos = useCallback(() => {
-    fetch(API + '/api/prode/partidos', { headers }).then(r => r.json()).then(setPartidos).catch(() => {})
+    fetch(API + '/api/prode/partidos', { headers })
+      .then(r => { if (!r.ok) throw new Error('bad response'); return r.json() })
+      .then(d => { setPartidos(Array.isArray(d) ? d : []); setPartidosLoaded(true) })
+      .catch(() => {
+        // Falla silenciosa (red/reload churn): reintentar pronto en vez de
+        // esperar al poll de 2 min — si no, la sección de en vivo "desaparece"
+        setTimeout(() => fetchPartidos(), 4000)
+      })
   }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchTabla = useCallback(() => {
@@ -563,6 +571,16 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
       setGanadorSaving(false)
       setTimeout(() => setGanadorToast(''), 3000)
     }
+  }
+
+  // No renderizar el home "vacío" mientras carga: si no, la sección de
+  // en vivo parece desaparecer en cada reload hasta que llega /partidos
+  if (!partidosLoaded) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   const ahora = new Date()
