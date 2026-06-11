@@ -1592,9 +1592,9 @@ function TablaContent({ user, lastUpdate }: { user: ProdeUser; lastUpdate: numbe
                 <tr className="border-b border-border">
                   <th className="label text-center px-3 py-3 w-10">#</th>
                   <th className="label text-left px-4 py-3">Equipo</th>
-                  <th className="label text-center px-3 py-3">Integrantes</th>
-                  <th className="label text-center px-3 py-3">Total pts</th>
-                  <th className="label text-center px-3 py-3">Promedio</th>
+                  <th className="label text-center px-3 py-3 hidden sm:table-cell">Integrantes</th>
+                  <th className="label text-center px-3 py-3 hidden sm:table-cell">Total pts</th>
+                  <th className="label text-center px-3 py-3 w-20">Promedio</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -1613,13 +1613,16 @@ function TablaContent({ user, lastUpdate }: { user: ProdeUser; lastUpdate: numbe
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-content-primary">{e.nombre}</p>
-                            <span className={`text-content-muted text-[9px] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <p className="font-medium text-content-primary truncate">{e.nombre}</p>
+                            <span className={`text-content-muted text-[9px] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▼</span>
                           </div>
+                          <p className="text-[11px] text-content-muted mt-0.5 sm:hidden">
+                            {e.integrantes} integrante{e.integrantes !== 1 ? 's' : ''} · {e.total_puntos} pts
+                          </p>
                         </td>
-                        <td className="px-3 py-3 text-center text-content-secondary">{e.integrantes}</td>
-                        <td className="px-3 py-3 text-center font-semibold text-content-primary">{e.total_puntos}</td>
+                        <td className="px-3 py-3 text-center text-content-secondary hidden sm:table-cell">{e.integrantes}</td>
+                        <td className="px-3 py-3 text-center font-semibold text-content-primary hidden sm:table-cell">{e.total_puntos}</td>
                         <td className="px-3 py-3 text-center">
                           <span className="font-semibold text-accent">{e.promedio}</span>
                         </td>
