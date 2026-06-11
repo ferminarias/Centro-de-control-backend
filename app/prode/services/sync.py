@@ -199,6 +199,13 @@ def _parse_match(m: dict, equipos_by_api_id: dict, equipos_by_name: dict, db: Se
         goles_local = reg.get("home")
         goles_visitante = reg.get("away")
 
+    # Minuto de juego según la API (v4 lo incluye en partidos en vivo)
+    minuto = m.get("minute")
+    try:
+        minuto = int(minuto) if minuto is not None else None
+    except (TypeError, ValueError):
+        minuto = None
+
     return {
         "api_id": api_id,
         "home": home,
@@ -211,6 +218,7 @@ def _parse_match(m: dict, equipos_by_api_id: dict, equipos_by_name: dict, db: Se
         "goles_local": goles_local,
         "goles_visitante": goles_visitante,
         "estado": estado,
+        "minuto": minuto,
     }
 
 
@@ -232,6 +240,7 @@ def _upsert_partido(db: Session, parsed: dict, recalc_points: bool = True) -> tu
             goles_local=parsed["goles_local"],
             goles_visitante=parsed["goles_visitante"],
             estado=parsed["estado"],
+            minuto=parsed["minuto"],
         )
         db.add(partido)
         db.flush()
@@ -254,6 +263,9 @@ def _upsert_partido(db: Session, parsed: dict, recalc_points: bool = True) -> tu
         if parsed["goles_local"] is not None or nuevo_estado == "programado":
             partido.goles_local = parsed["goles_local"]
             partido.goles_visitante = parsed["goles_visitante"]
+        # Minuto: mismo criterio — no borrar el último conocido durante el juego
+        if parsed["minuto"] is not None or nuevo_estado != "en_juego":
+            partido.minuto = parsed["minuto"]
         partido.estado = nuevo_estado
         action = "updated"
 

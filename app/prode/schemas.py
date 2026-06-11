@@ -91,6 +91,7 @@ class PartidoResponse(BaseModel):
     goles_local: Optional[int]
     goles_visitante: Optional[int]
     estado: str
+    minuto: Optional[int] = None
     mi_prediccion: Optional[PrediccionResponse] = None
 
 

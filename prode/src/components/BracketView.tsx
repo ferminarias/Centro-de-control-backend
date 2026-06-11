@@ -18,6 +18,7 @@ export interface BracketPartido {
   goles_local: number | null
   goles_visitante: number | null
   estado: string
+  minuto?: number | null
 }
 
 interface Props {
@@ -69,14 +70,15 @@ function minuteLabel(fecha: string): string {
   return '90+'
 }
 
-function useLiveMinute(fecha: string, estado: string): string {
+function useLiveMinute(fecha: string, estado: string, minutoApi?: number | null): string {
   const [, bump] = useState(0)
   useEffect(() => {
-    if (estado !== 'en_juego') return
+    if (estado !== 'en_juego' || minutoApi != null) return
     const t = setInterval(() => bump(n => n + 1), 30_000)
     return () => clearInterval(t)
-  }, [estado])
-  return estado === 'en_juego' ? minuteLabel(fecha) : ''
+  }, [estado, minutoApi])
+  if (estado !== 'en_juego') return ''
+  return minutoApi != null ? `${minutoApi}'` : minuteLabel(fecha)
 }
 
 // ── Layout model ──────────────────────────────────────────────────────────────
@@ -220,7 +222,7 @@ function TeamLine({ equipo, goles, esGanador, esPerdedor, live }: {
 
 function MatchCard({ node, tz, destacado }: { node: BNode; tz?: string; destacado?: boolean }) {
   const p = node.partido
-  const minuto = useLiveMinute(p?.fecha ?? '', p?.estado ?? '')
+  const minuto = useLiveMinute(p?.fecha ?? '', p?.estado ?? '', p?.minuto)
   const win = ganador(p)
   const live = p?.estado === 'en_juego'
   const jugado = p?.estado === 'finalizado' || live

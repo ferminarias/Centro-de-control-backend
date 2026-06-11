@@ -63,6 +63,8 @@ class ProdePartido(Base):
     goles_local: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     goles_visitante: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     estado: Mapped[str] = mapped_column(String(20), nullable=False, default="programado")
+    # Minuto de juego reportado por la API (solo partidos en vivo)
+    minuto: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     equipo_local: Mapped[Optional["ProdeEquipo"]] = relationship(
         "ProdeEquipo", foreign_keys=[equipo_local_id], lazy="joined"

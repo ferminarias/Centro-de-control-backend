@@ -396,6 +396,11 @@ def _check_prode_partidos_tables(conn) -> None:
         conn.commit()
         logger.warning("Startup check: created prode_partidos table")
 
+    if not _column_exists(conn, "prode_partidos", "minuto"):
+        conn.execute(text("ALTER TABLE prode_partidos ADD COLUMN minuto INTEGER"))
+        conn.commit()
+        logger.warning("Startup check: added minuto to prode_partidos")
+
     if not _table_exists(conn, "prode_predicciones"):
         conn.execute(text("""
             CREATE TABLE prode_predicciones (

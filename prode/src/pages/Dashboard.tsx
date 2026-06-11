@@ -46,6 +46,7 @@ interface Partido {
   goles_local: number | null
   goles_visitante: number | null
   estado: string
+  minuto: number | null
   mi_prediccion: Prediccion | null
 }
 
@@ -219,8 +220,8 @@ function useLivePolling(
           setPartidos(prev => prev.map(p => {
             const upd = live.find(l => l.id === p.id)
             if (!upd) return p
-            if (upd.goles_local === p.goles_local && upd.goles_visitante === p.goles_visitante && upd.estado === p.estado) return p
-            return { ...p, goles_local: upd.goles_local, goles_visitante: upd.goles_visitante, estado: upd.estado }
+            if (upd.goles_local === p.goles_local && upd.goles_visitante === p.goles_visitante && upd.estado === p.estado && upd.minuto === p.minuto) return p
+            return { ...p, goles_local: upd.goles_local, goles_visitante: upd.goles_visitante, estado: upd.estado, minuto: upd.minuto }
           }))
         })
         .catch(() => {})
@@ -705,7 +706,7 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
 // ── Live Match Card ───────────────────────────────────────────────────────────
 
 function LiveMatchCard({ partido }: { partido: Partido }) {
-  const minuto = useLiveMinute(partido.fecha, partido.estado)
+  const minuto = useLiveMinute(partido.fecha, partido.estado, partido.minuto)
   const pred = partido.mi_prediccion
 
   const glReal = partido.goles_local ?? 0
@@ -1084,11 +1085,13 @@ function CuadroContent({ tz, lastUpdate }: { tz: string; lastUpdate: number }) {
   )
 }
 
-// Approximate match minute from kick-off time
-function useLiveMinute(fecha: string, estado: string): string {
+// Minuto de juego: usa el que reporta la API (se refresca con cada sync);
+// si la API no lo manda, cae a la estimación desde el kickoff.
+function useLiveMinute(fecha: string, estado: string, minutoApi?: number | null): string {
   const [label, setLabel] = useState('')
   useEffect(() => {
     if (estado !== 'en_juego') { setLabel(''); return }
+    if (minutoApi != null) { setLabel(`${minutoApi}'`); return }
     function calc() {
       const elapsed = (Date.now() - new Date(fecha).getTime()) / 60000
       if (elapsed < 0) return setLabel("0'")
@@ -1101,7 +1104,7 @@ function useLiveMinute(fecha: string, estado: string): string {
     calc()
     const t = setInterval(calc, 30_000)
     return () => clearInterval(t)
-  }, [fecha, estado])
+  }, [fecha, estado, minutoApi])
   return label
 }
 
@@ -1126,7 +1129,7 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
   const esPostergado = partido.estado === 'postergado'
   const esCancelado = partido.estado === 'cancelado'
   const yaPronosticado = pred !== null
-  const minuto = useLiveMinute(partido.fecha, partido.estado)
+  const minuto = useLiveMinute(partido.fecha, partido.estado, partido.minuto)
 
   // Minutes until cutoff (only relevant when open and closing soon)
   const minHastaCierre = Math.floor((cutoff.getTime() - ahora.getTime()) / 60000)
