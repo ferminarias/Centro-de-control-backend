@@ -25,6 +25,9 @@ EXCLUDED_PATHS = [
     "/health",
     "/api/v1/auth/login",
     "/api/v1/auth/refresh",
+    # El prode no es parte del CRM multi-tenant: sus usuarios no tienen
+    # cuenta_id y audit_logs lo exige NOT NULL (cada POST fallaba el INSERT)
+    "/api/prode",
 ]
 
 # Campos sensibles que se enmascaran
@@ -139,6 +142,11 @@ class AuditMiddleware(BaseHTTPMiddleware):
             # Ejemplo: /api/v1/admin/leads/12345 -> entidad: lead, id: 12345
             entidad_tipo, entidad_id = self._extract_entity_info(path)
             
+            # Sin cuenta_id no se puede auditar (columna NOT NULL) — evita
+            # un INSERT destinado a fallar por cada escritura anónima
+            if cuenta_id is None:
+                return response
+
             # Guardar en audit log
             try:
                 db = SessionLocal()
