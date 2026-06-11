@@ -582,16 +582,10 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
         <p className="text-sm text-content-secondary mt-0.5">Mundial 2026 · USA / México / Canadá</p>
       </div>
 
-      {/* En Vivo — sección prominente */}
+      {/* En Vivo — la card ya lleva su propio badge, sin encabezado extra */}
       {enVivo.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <p className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">En Vivo ahora</p>
-          </div>
-          <div className="flex flex-col gap-3">
-            {enVivo.map(p => <LiveMatchCard key={p.id} partido={p} />)}
-          </div>
+        <div className="flex flex-col gap-3">
+          {enVivo.map(p => <LiveMatchCard key={p.id} partido={p} />)}
         </div>
       )}
 
@@ -910,7 +904,6 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
     : partidos.filter(p => p.grupo === grupoActivo)
 
   const eliminatoriasFases = ['r32', 'r16', 'cuartos', 'semis', 'tercero', 'final']
-  const hayEnVivo = partidos.some(p => p.estado === 'en_juego')
 
   if (loading) {
     return (
@@ -941,14 +934,6 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
 
   return (
     <div className="flex flex-col gap-4 animate-slide-up">
-      {/* Live indicator */}
-      {hayEnVivo && (
-        <div className="flex items-center gap-2 bg-status-draw/8 border border-status-draw/20 rounded-xl px-4 py-2.5">
-          <span className="w-2 h-2 rounded-full bg-status-draw animate-pulse shrink-0" />
-          <p className="text-xs font-semibold text-status-draw">Partidos en vivo — resultados actualizados cada minuto</p>
-        </div>
-      )}
-
       {/* Tabs grupos / eliminatorias */}
       <div className="flex gap-1 flex-wrap">
         {GRUPOS.map(g => {
