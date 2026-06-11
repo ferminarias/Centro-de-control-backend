@@ -105,7 +105,7 @@ function formatFecha(iso: string, tz: string = DEFAULT_TZ) {
   const d = new Date(iso)
   return {
     date: d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz }),
-    time: d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: tz }),
+    time: d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }),
   }
 }
 
@@ -1223,25 +1223,12 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
         ) : cerrado ? (
           <span className="text-[11px] text-content-muted">cerrado</span>
         ) : (
-          // Open for prediction or editing
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-1.5">
-              <ScoreInput value={gl} onChange={setGl} disabled={false} />
-              <span className="text-xs text-content-muted font-bold">-</span>
-              <ScoreInput value={gv} onChange={setGv} disabled={false} />
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="ml-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-40"
-              >
-                {saving ? '...' : yaPronosticado ? 'Editar' : 'Guardar'}
-              </button>
-            </div>
-            {cierraProximo && (
-              <span className="text-[9px] text-amber-400 font-medium">
-                cierra en {minHastaCierre}min
-              </span>
-            )}
+          // Open for prediction or editing — el botón va en una fila aparte
+          // (abajo) para que equipos y marcador queden alineados y simétricos
+          <div className="flex items-center gap-1.5">
+            <ScoreInput value={gl} onChange={setGl} disabled={false} />
+            <span className="text-xs text-content-muted font-bold">-</span>
+            <ScoreInput value={gv} onChange={setGv} disabled={false} />
           </div>
         )}
       </div>
@@ -1254,6 +1241,24 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
         </span>
       </div>
       </div>
+
+      {/* Guardar/Editar + aviso de cierre — fila propia, centrada */}
+      {!cerrado && (
+        <div className="flex flex-col items-center gap-1.5">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="text-xs font-semibold px-4 py-1.5 rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-40"
+          >
+            {saving ? '...' : yaPronosticado ? 'Editar' : 'Guardar'}
+          </button>
+          {cierraProximo && (
+            <span className="text-[10px] font-semibold text-amber-400 bg-amber-400/10 rounded-full px-2 py-0.5">
+              cierra en {minHastaCierre}min
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

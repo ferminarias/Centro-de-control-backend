@@ -184,7 +184,7 @@ function linkPath(l: BLink): string {
 function fechaCorta(iso: string, tz?: string) {
   const d = new Date(iso)
   const date = d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', timeZone: tz })
-  const time = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: tz })
+  const time = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz })
   return `${date} · ${time}`
 }
 
