@@ -448,6 +448,32 @@ def _check_prode_clubs(conn) -> None:
         logger.warning("Startup check: added club_id to prode_users")
 
 
+def _check_prode_equipos_iso(conn) -> None:
+    """Repair codigo_iso drift in prode_equipos.
+
+    Rows auto-created by the fixture sync before the TLA→ISO mapping existed
+    were stored with codigo_iso='UN' (or FIFA 3-letter codes), which breaks
+    flag rendering in the frontend. Re-assert the canonical alpha-2 code for
+    every known team by name, every startup.
+    """
+    if not _table_exists(conn, "prode_equipos"):
+        return
+    fixed = 0
+    for nombre, nombre_api, codigo_iso, _grupo in _EQUIPOS_WC2026:
+        result = conn.execute(
+            text(
+                "UPDATE prode_equipos SET codigo_iso = :iso "
+                "WHERE (lower(nombre) = lower(:nombre) OR lower(nombre_api) = lower(:nombre_api)) "
+                "AND codigo_iso <> :iso"
+            ),
+            {"iso": codigo_iso, "nombre": nombre, "nombre_api": nombre_api},
+        )
+        fixed += result.rowcount or 0
+    if fixed:
+        conn.commit()
+        logger.warning("Startup check: repaired codigo_iso on %d prode_equipos rows", fixed)
+
+
 def run_startup_checks(engine: Engine) -> None:
     """
     Run all schema fallback checks at application startup.
@@ -467,6 +493,7 @@ def run_startup_checks(engine: Engine) -> None:
             _check_prode_users_table(conn)
             _check_prode_partidos_tables(conn)
             _check_prode_clubs(conn)
+            _check_prode_equipos_iso(conn)
         logger.info("Startup schema checks completed")
     except Exception as exc:
         logger.error("Startup schema checks failed: %s", exc)

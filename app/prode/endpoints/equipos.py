@@ -115,6 +115,34 @@ def get_tabla_equipos(
     return [ClubTablaEntry(posicion=i + 1, **r) for i, r in enumerate(rows)]
 
 
+@router.get("/equipos/usuarios-disponibles")
+def list_usuarios_disponibles(
+    db: Session = Depends(get_db),
+    _: ProdeUser = Depends(_require_gerente),
+):
+    """Active users a gerente can pick from when adding team members.
+
+    Includes club_id so the frontend can hide/label people already in a team.
+    """
+    users = (
+        db.query(ProdeUser)
+        .filter(ProdeUser.activo.is_(True))
+        .order_by(ProdeUser.nombre, ProdeUser.apellido)
+        .all()
+    )
+    return [
+        {
+            "id": str(u.id),
+            "nombre": u.nombre,
+            "apellido": u.apellido,
+            "email": u.email,
+            "avatar_url": u.avatar_url,
+            "club_id": u.club_id,
+        }
+        for u in users
+    ]
+
+
 # ── Members ───────────────────────────────────────────────────────────────────
 
 @router.get("/equipos/{club_id}/miembros")

@@ -9,6 +9,7 @@ interface ProdeUser {
   apellido: string
   activo: boolean
   is_admin: boolean
+  es_gerente: boolean
   must_change_password: boolean
   created_at: string
 }
@@ -303,6 +304,20 @@ export default function Admin() {
     }
   }
 
+  async function toggleGerente(user: ProdeUser) {
+    try {
+      await fetch(API + `/api/prode/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({ es_gerente: !user.es_gerente }),
+      })
+      await fetchUsers()
+      showToast(user.es_gerente ? 'Rol gerente quitado' : 'Rol gerente asignado — ya puede crear equipos')
+    } catch {
+      showToast('Error al actualizar usuario')
+    }
+  }
+
   async function syncFixtures() {
     setSyncing(true)
     try {
@@ -459,17 +474,30 @@ export default function Admin() {
                       </button>
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => toggleAdmin(user)}
-                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                          user.is_admin
-                            ? 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
-                            : 'bg-border text-content-muted border border-transparent hover:bg-border-strong'
-                        }`}
-                        title={user.is_admin ? 'Quitar admin' : 'Dar admin'}
-                      >
-                        {user.is_admin ? 'Admin' : 'Jugador'}
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => toggleAdmin(user)}
+                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                            user.is_admin
+                              ? 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20'
+                              : 'bg-border text-content-muted border border-transparent hover:bg-border-strong'
+                          }`}
+                          title={user.is_admin ? 'Quitar admin' : 'Dar admin'}
+                        >
+                          {user.is_admin ? 'Admin' : 'Jugador'}
+                        </button>
+                        <button
+                          onClick={() => toggleGerente(user)}
+                          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                            user.es_gerente
+                              ? 'bg-status-draw/10 text-status-draw border border-status-draw/20 hover:bg-status-draw/20'
+                              : 'bg-border text-content-muted border border-transparent hover:bg-border-strong'
+                          }`}
+                          title={user.es_gerente ? 'Quitar rol gerente' : 'Dar rol gerente (puede crear equipos)'}
+                        >
+                          {user.es_gerente ? 'Gerente ✓' : 'Gerente'}
+                        </button>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {user.must_change_password

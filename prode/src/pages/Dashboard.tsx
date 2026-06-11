@@ -1554,7 +1554,7 @@ function RankIcon({ pos, isMe }: { pos: number; isMe: boolean }) {
 
 interface ClubMember { user_id: string; nombre: string; apellido: string; avatar_url: string | null; puntos: number }
 interface ClubDetail { id: number; nombre: string; gerente_id: string; miembros: ClubMember[] }
-interface AllUser { id: string; nombre: string; apellido: string; email: string; avatar_url: string | null }
+interface AllUser { id: string; nombre: string; apellido: string; email: string; avatar_url: string | null; club_id: number | null }
 
 function EquipoContent({ user }: { user: ProdeUser }) {
   const [club, setClub] = useState<ClubDetail | null | undefined>(undefined)
@@ -1578,12 +1578,12 @@ function EquipoContent({ user }: { user: ProdeUser }) {
   useEffect(() => { fetchClub() }, [fetchClub])
 
   useEffect(() => {
-    if (!user.is_admin) return
-    fetch(API + '/api/prode/admin/users', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(setAllUsers)
+    if (!user.es_gerente && !user.is_admin) return
+    fetch(API + '/api/prode/equipos/usuarios-disponibles', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setAllUsers(Array.isArray(d) ? d : []))
       .catch(() => {})
-  }, [token, user.is_admin])
+  }, [token, user.es_gerente, user.is_admin])
 
   async function handleCreate() {
     if (!newNombre.trim()) return
@@ -1701,39 +1701,17 @@ function EquipoContent({ user }: { user: ProdeUser }) {
             </div>
           </div>
 
-          {/* Add member (gerente only, admin has full user list) */}
+          {/* Add member — buscador de usuarios */}
           {isMiClub && (
             <div className="card p-4 flex flex-col gap-3">
               <p className="text-sm font-semibold text-content-primary">Agregar integrante</p>
-              {user.is_admin && allUsers.length > 0 ? (
-                <div className="flex gap-2">
-                  <select
-                    value={addUserId}
-                    onChange={e => setAddUserId(e.target.value)}
-                    className="flex-1 bg-bg-elevated text-content-primary text-sm rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:border-accent/50 transition-colors"
-                  >
-                    <option value="">Seleccionar usuario...</option>
-                    {allUsers.filter(u => !club.miembros.find(m => m.user_id === u.id)).map(u => (
-                      <option key={u.id} value={u.id}>{u.nombre} {u.apellido} ({u.email})</option>
-                    ))}
-                  </select>
-                  <button onClick={handleAddMember} disabled={!addUserId || saving} className="px-4 py-2.5 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent-hover disabled:opacity-40 transition-colors">
-                    {saving ? '...' : 'Agregar'}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <input
-                    value={addUserId}
-                    onChange={e => setAddUserId(e.target.value)}
-                    placeholder="ID del usuario (UUID)"
-                    className="flex-1 bg-bg-elevated text-content-primary text-sm rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:border-accent/50 placeholder:text-content-muted transition-colors"
-                  />
-                  <button onClick={handleAddMember} disabled={!addUserId || saving} className="px-4 py-2.5 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent-hover disabled:opacity-40 transition-colors">
-                    {saving ? '...' : 'Agregar'}
-                  </button>
-                </div>
-              )}
+              <UserPicker
+                usuarios={allUsers.filter(u => !club.miembros.find(m => m.user_id === u.id))}
+                selectedId={addUserId}
+                onSelect={setAddUserId}
+                saving={saving}
+                onAdd={handleAddMember}
+              />
             </div>
           )}
         </div>
@@ -1751,6 +1729,119 @@ function EquipoContent({ user }: { user: ProdeUser }) {
           {toast}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── UserPicker: combobox con búsqueda para agregar integrantes ────────────────
+
+function UserPicker({ usuarios, selectedId, onSelect, saving, onAdd }: {
+  usuarios: AllUser[]
+  selectedId: string
+  onSelect: (id: string) => void
+  saving: boolean
+  onAdd: () => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+
+  // Búsqueda insensible a mayúsculas y tildes
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const q = norm(query.trim())
+  const matches = (q
+    ? usuarios.filter(u => norm(`${u.nombre} ${u.apellido} ${u.email}`).includes(q))
+    : usuarios
+  ).slice(0, 8)
+
+  const selected = usuarios.find(u => u.id === selectedId)
+
+  function pick(u: AllUser) {
+    onSelect(u.id)
+    setQuery('')
+    setOpen(false)
+  }
+
+  return (
+    <div className="flex gap-2 items-start">
+      <div className="relative flex-1 min-w-0">
+        {selected ? (
+          <div className="flex items-center gap-2 bg-bg-elevated border border-accent/40 rounded-xl px-3 py-2">
+            <div className="w-6 h-6 rounded-full bg-bg-overlay border border-border flex items-center justify-center text-[10px] font-semibold text-content-secondary shrink-0 overflow-hidden">
+              {selected.avatar_url
+                ? <img src={selected.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                : <>{selected.nombre[0]}{selected.apellido[0]}</>
+              }
+            </div>
+            <span className="text-sm text-content-primary font-medium truncate flex-1">
+              {selected.nombre} {selected.apellido}
+            </span>
+            <button
+              onClick={() => onSelect('')}
+              className="text-content-muted hover:text-content-primary text-xs px-1.5 py-0.5 rounded transition-colors shrink-0"
+              aria-label="Quitar selección"
+            >✕</button>
+          </div>
+        ) : (
+          <>
+            <input
+              value={query}
+              onChange={e => { setQuery(e.target.value); setOpen(true) }}
+              onFocus={() => setOpen(true)}
+              placeholder="Buscá por nombre o email…"
+              className="w-full bg-bg-elevated text-content-primary text-base sm:text-sm rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:border-accent/50 placeholder:text-content-muted transition-colors"
+            />
+            {open && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-20 bg-bg-surface border border-border rounded-xl shadow-card-hover overflow-hidden max-h-64 overflow-y-auto">
+                  {matches.length === 0 ? (
+                    <p className="px-3 py-4 text-sm text-content-muted text-center">
+                      {usuarios.length === 0 ? 'No hay usuarios disponibles' : 'Sin resultados para esa búsqueda'}
+                    </p>
+                  ) : matches.map(u => {
+                    const enOtroEquipo = u.club_id !== null
+                    return (
+                      <button
+                        key={u.id}
+                        onClick={() => !enOtroEquipo && pick(u)}
+                        disabled={enOtroEquipo}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
+                          enOtroEquipo
+                            ? 'opacity-40 cursor-not-allowed'
+                            : 'hover:bg-bg-elevated'
+                        }`}
+                      >
+                        <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-[10px] font-semibold text-content-secondary shrink-0 overflow-hidden">
+                          {u.avatar_url
+                            ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            : <>{u.nombre[0]}{u.apellido[0]}</>
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-content-primary font-medium truncate leading-tight">
+                            {u.nombre} {u.apellido}
+                          </p>
+                          <p className="text-[11px] text-content-muted truncate">{u.email}</p>
+                        </div>
+                        {enOtroEquipo && (
+                          <span className="text-[10px] text-content-muted shrink-0">en otro equipo</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+      <button
+        onClick={onAdd}
+        disabled={!selectedId || saving}
+        className="px-4 py-2.5 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent-hover disabled:opacity-40 transition-colors shrink-0"
+      >
+        {saving ? '...' : 'Agregar'}
+      </button>
     </div>
   )
 }
