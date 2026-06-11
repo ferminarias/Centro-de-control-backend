@@ -5,6 +5,7 @@ Uses APScheduler (in-process, no Redis/Celery needed).
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -52,6 +53,7 @@ def start_scheduler() -> None:
     _scheduler.add_job(
         _run_sync,
         trigger=IntervalTrigger(minutes=SYNC_INTERVAL_MINUTES),
+        next_run_time=datetime.now(timezone.utc),  # primera corrida inmediata, no a los 5 min
         id="prode_sync",
         replace_existing=True,
         max_instances=1,  # never overlap

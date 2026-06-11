@@ -185,7 +185,17 @@ function useLivePolling(
   setPartidos: Dispatch<SetStateAction<Partido[]>>,
   refetchAll: () => void,
 ) {
-  const hayEnVivo = partidos.some(p => p.estado === 'en_juego')
+  // Activo si hay partidos en juego, O si alguno ya debería haber empezado
+  // (kickoff alcanzado hace <3 h pero la DB aún dice "programado") — así el
+  // pase a "en vivo" no depende solo del scheduler de 5 min del backend:
+  // /partidos/live sincroniza contra la API y actualiza el estado.
+  const ahora = Date.now()
+  const hayEnVivo = partidos.some(p => {
+    if (p.estado === 'en_juego') return true
+    if (p.estado !== 'programado') return false
+    const kickoff = new Date(p.fecha).getTime()
+    return kickoff - ahora < 2 * 60_000 && ahora - kickoff < 3 * 60 * 60_000
+  })
   const refetchRef = useRef(refetchAll)
   useEffect(() => { refetchRef.current = refetchAll })
 
