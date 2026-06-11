@@ -194,7 +194,7 @@ def _parse_match(m: dict, equipos_by_api_id: dict, equipos_by_name: dict, db: Se
     ft = score.get("fullTime", {}) or {}
     goles_local = ft.get("home")
     goles_visitante = ft.get("away")
-    if goles_local is None and api_status == "IN_PLAY":
+    if goles_local is None and api_status in ("IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"):
         reg = score.get("regularTime", {}) or {}
         goles_local = reg.get("home")
         goles_visitante = reg.get("away")
@@ -245,9 +245,16 @@ def _upsert_partido(db: Session, parsed: dict, recalc_points: bool = True) -> tu
         partido.fecha = parsed["fecha"]
         if parsed["estadio"]:
             partido.estadio = parsed["estadio"]
-        partido.goles_local = parsed["goles_local"]
-        partido.goles_visitante = parsed["goles_visitante"]
-        partido.estado = parsed["estado"]
+        # Los feeds en vivo "flapean": a veces devuelven TIMED/SCHEDULED o
+        # goles null por un instante en pleno partido. Nunca degradar
+        # en_juego → programado, ni borrar un marcador ya conocido.
+        nuevo_estado = parsed["estado"]
+        if partido.estado == "en_juego" and nuevo_estado == "programado":
+            nuevo_estado = "en_juego"
+        if parsed["goles_local"] is not None or nuevo_estado == "programado":
+            partido.goles_local = parsed["goles_local"]
+            partido.goles_visitante = parsed["goles_visitante"]
+        partido.estado = nuevo_estado
         action = "updated"
 
     if (
