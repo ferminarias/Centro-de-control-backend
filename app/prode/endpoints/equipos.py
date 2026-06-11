@@ -45,7 +45,11 @@ def create_equipo(
     club = ProdeClub(nombre=body.nombre.strip(), gerente_id=current_user.id)
     db.add(club)
     db.flush()
-    current_user.club_id = club.id
+    # Un admin crea equipos para terceros sin sumarse como miembro: el primer
+    # usuario agregado pasará a ser el gerente (ver add_miembro). Un gerente
+    # crea su propio equipo y queda adentro.
+    if not current_user.is_admin:
+        current_user.club_id = club.id
     db.commit()
     db.refresh(club)
     return club
@@ -201,9 +205,19 @@ def add_miembro(
     if user.club_id == club_id:
         raise HTTPException(status_code=409, detail="El usuario ya es miembro de este equipo")
 
+    # Primer miembro del equipo → se convierte en gerente y puede sumar al resto
+    es_primer_miembro = (
+        db.query(func.count(ProdeUser.id)).filter(ProdeUser.club_id == club_id).scalar() or 0
+    ) == 0
+
     user.club_id = club_id
+    gerente_asignado = False
+    if es_primer_miembro and str(club.gerente_id) != str(user.id):
+        club.gerente_id = user.id
+        user.es_gerente = True
+        gerente_asignado = True
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "gerente_asignado": gerente_asignado}
 
 
 @router.delete("/equipos/{club_id}/miembros/{user_id}")

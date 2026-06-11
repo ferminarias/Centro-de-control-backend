@@ -1554,9 +1554,232 @@ function RankIcon({ pos, isMe }: { pos: number; isMe: boolean }) {
 
 interface ClubMember { user_id: string; nombre: string; apellido: string; avatar_url: string | null; puntos: number }
 interface ClubDetail { id: number; nombre: string; gerente_id: string; miembros: ClubMember[] }
+interface ClubInfo { id: number; nombre: string; gerente_id: string; created_at: string }
 interface AllUser { id: string; nombre: string; apellido: string; email: string; avatar_url: string | null; club_id: number | null }
 
 function EquipoContent({ user }: { user: ProdeUser }) {
+  if (user.is_admin) return <AdminEquipos />
+  return <GerenteEquipo user={user} />
+}
+
+// Admin: gestiona todos los equipos. El primer integrante agregado a un
+// equipo queda automáticamente como gerente (lo asigna el backend).
+function AdminEquipos() {
+  const [clubs, setClubs] = useState<ClubInfo[]>([])
+  const [allUsers, setAllUsers] = useState<AllUser[]>([])
+  const [miembros, setMiembros] = useState<Record<number, ClubMember[]>>({})
+  const [expanded, setExpanded] = useState<number | null>(null)
+  const [newNombre, setNewNombre] = useState('')
+  const [addUserId, setAddUserId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [toast, setToast] = useState('')
+  const token = localStorage.getItem('prode_token')
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3500) }
+
+  const fetchClubs = useCallback(() => {
+    fetch(API + '/api/prode/equipos', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setClubs(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [token])
+
+  const fetchUsers = useCallback(() => {
+    fetch(API + '/api/prode/equipos/usuarios-disponibles', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setAllUsers(Array.isArray(d) ? d : []))
+      .catch(() => {})
+  }, [token])
+
+  const fetchMiembros = useCallback((clubId: number) => {
+    fetch(API + `/api/prode/equipos/${clubId}/miembros`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setMiembros(prev => ({ ...prev, [clubId]: Array.isArray(d) ? d : [] })))
+      .catch(() => {})
+  }, [token])
+
+  useEffect(() => { fetchClubs(); fetchUsers() }, [fetchClubs, fetchUsers])
+
+  function toggleExpand(clubId: number) {
+    setAddUserId('')
+    if (expanded === clubId) { setExpanded(null); return }
+    setExpanded(clubId)
+    fetchMiembros(clubId)
+  }
+
+  async function handleCreate() {
+    if (!newNombre.trim()) return
+    setSaving(true)
+    const res = await fetch(API + '/api/prode/equipos', { method: 'POST', headers, body: JSON.stringify({ nombre: newNombre.trim() }) })
+    setSaving(false)
+    if (res.ok) {
+      const club = await res.json()
+      setNewNombre('')
+      fetchClubs()
+      setExpanded(club.id)
+      setMiembros(prev => ({ ...prev, [club.id]: [] }))
+      showToast('Equipo creado ✓ — el primer integrante que agregues será el gerente')
+    } else {
+      const d = await res.json(); showToast(d.detail || 'Error al crear')
+    }
+  }
+
+  async function handleAdd(clubId: number) {
+    if (!addUserId) return
+    setSaving(true)
+    const res = await fetch(API + `/api/prode/equipos/${clubId}/miembros`, { method: 'POST', headers, body: JSON.stringify({ user_id: addUserId }) })
+    setSaving(false)
+    if (res.ok) {
+      const d = await res.json()
+      setAddUserId('')
+      fetchMiembros(clubId)
+      fetchClubs()
+      fetchUsers()
+      showToast(d.gerente_asignado ? 'Agregado ✓ — quedó como gerente del equipo' : 'Miembro agregado ✓')
+    } else {
+      const d = await res.json(); showToast(d.detail || 'Error')
+    }
+  }
+
+  async function handleRemove(clubId: number, userId: string) {
+    const res = await fetch(API + `/api/prode/equipos/${clubId}/miembros/${userId}`, { method: 'DELETE', headers })
+    if (res.ok) { fetchMiembros(clubId); fetchUsers(); showToast('Miembro eliminado') }
+    else { const d = await res.json(); showToast(d.detail || 'Error') }
+  }
+
+  async function handleDisolve(club: ClubInfo) {
+    if (!confirm(`¿Disolver el equipo "${club.nombre}"? Esta acción no se puede deshacer.`)) return
+    const res = await fetch(API + `/api/prode/equipos/${club.id}`, { method: 'DELETE', headers })
+    if (res.ok) { setExpanded(null); fetchClubs(); fetchUsers(); showToast('Equipo disuelto') }
+    else { const d = await res.json(); showToast(d.detail || 'Error') }
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-20"><div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>
+  }
+
+  return (
+    <div className="flex flex-col gap-6 animate-slide-up">
+      <div>
+        <h1 className="text-xl font-semibold text-content-primary">Equipos</h1>
+        <p className="text-sm text-content-secondary mt-0.5">
+          Creá equipos y agregá integrantes — el primero en entrar queda como gerente
+        </p>
+      </div>
+
+      {/* Crear equipo */}
+      <div className="card p-5 flex flex-col gap-3">
+        <p className="text-sm font-semibold text-content-primary">Crear equipo</p>
+        <div className="flex gap-2">
+          <input
+            value={newNombre}
+            onChange={e => setNewNombre(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleCreate()}
+            placeholder="Nombre del equipo"
+            className="flex-1 bg-bg-elevated text-content-primary text-base sm:text-sm rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:border-accent/50 placeholder:text-content-muted transition-colors"
+          />
+          <button
+            onClick={handleCreate}
+            disabled={!newNombre.trim() || saving}
+            className="px-4 py-2.5 bg-accent text-white text-sm font-semibold rounded-xl hover:bg-accent-hover disabled:opacity-40 transition-colors"
+          >
+            {saving ? '...' : 'Crear'}
+          </button>
+        </div>
+      </div>
+
+      {/* Lista de equipos */}
+      {clubs.length === 0 ? (
+        <div className="card p-8 text-center">
+          <p className="text-content-muted text-sm">Todavía no hay equipos creados.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {clubs.map(club => {
+            const isOpen = expanded === club.id
+            const ms = miembros[club.id]
+            return (
+              <div key={club.id} className="card overflow-hidden">
+                <button
+                  onClick={() => toggleExpand(club.id)}
+                  className="w-full px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-bg-elevated transition-colors text-left"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-content-primary">{club.nombre}</p>
+                    {ms && <p className="text-xs text-content-muted mt-0.5">{ms.length} integrante{ms.length !== 1 ? 's' : ''}</p>}
+                  </div>
+                  <span className={`text-content-muted text-xs transition-transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-border">
+                    <div className="divide-y divide-border">
+                      {(ms ?? []).map(m => (
+                        <div key={m.user_id} className="px-4 py-3 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-xs font-semibold text-content-secondary shrink-0 overflow-hidden">
+                            {m.avatar_url
+                              ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              : <>{m.nombre[0]}{m.apellido[0]}</>
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-content-primary truncate">{m.nombre} {m.apellido}</p>
+                            {m.user_id === club.gerente_id && (
+                              <p className="text-[10px] text-accent font-semibold">Gerente</p>
+                            )}
+                          </div>
+                          <span className="text-sm font-semibold text-content-primary shrink-0">{m.puntos} pts</span>
+                          {m.user_id !== club.gerente_id && (
+                            <button onClick={() => handleRemove(club.id, m.user_id)} className="text-content-muted hover:text-red-400 text-xs px-2 py-1 rounded-lg hover:bg-red-500/10 transition-colors">✕</button>
+                          )}
+                        </div>
+                      ))}
+                      {ms && ms.length === 0 && (
+                        <p className="px-4 py-5 text-sm text-content-muted text-center">
+                          Sin integrantes — el primero que agregues será el gerente
+                        </p>
+                      )}
+                      {!ms && (
+                        <div className="flex items-center justify-center py-6"><div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>
+                      )}
+                    </div>
+
+                    <div className="p-4 border-t border-border flex flex-col gap-3">
+                      <UserPicker
+                        usuarios={allUsers.filter(u => !(ms ?? []).find(m => m.user_id === u.id))}
+                        selectedId={addUserId}
+                        onSelect={setAddUserId}
+                        saving={saving}
+                        onAdd={() => handleAdd(club.id)}
+                      />
+                      <button
+                        onClick={() => handleDisolve(club)}
+                        className="self-start text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors border border-red-500/20"
+                      >
+                        Disolver equipo
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-bg-elevated border border-border rounded-xl px-5 py-3 text-sm text-content-primary shadow-card-hover z-50">
+          {toast}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function GerenteEquipo({ user }: { user: ProdeUser }) {
   const [club, setClub] = useState<ClubDetail | null | undefined>(undefined)
   const [allUsers, setAllUsers] = useState<AllUser[]>([])
   const [newNombre, setNewNombre] = useState('')
