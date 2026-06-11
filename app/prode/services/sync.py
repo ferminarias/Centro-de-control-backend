@@ -383,8 +383,10 @@ def get_live_matches_from_api(api_key: str) -> list[dict]:
                 (data[0].get("score") or {}).get("fullTime"),
             )
     except Exception as exc:
+        # Corte transitorio (SSL EOF / server disconnect): conservar el último
+        # dato conocido y NO renovar el TTL, así el próximo tick reintenta ya
         logger.warning("Live sync API error: %s", exc)
-        data = []
+        return _live_cache["matches"]
 
     _live_cache["ts"] = now
     _live_cache["matches"] = data
