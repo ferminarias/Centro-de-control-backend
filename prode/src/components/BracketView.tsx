@@ -61,7 +61,7 @@ function ganador(p: BracketPartido | null): Lado | null {
 // Approximate match minute from kick-off time (same heuristic as Dashboard)
 function minuteLabel(fecha: string): string {
   const elapsed = (Date.now() - new Date(fecha).getTime()) / 60000
-  if (elapsed < 0) return 'LIVE'
+  if (elapsed < 0) return "0'"
   if (elapsed <= 45) return `${Math.min(45, Math.floor(elapsed))}'`
   if (elapsed <= 60) return 'HT'
   const min2 = Math.floor(elapsed - 15)

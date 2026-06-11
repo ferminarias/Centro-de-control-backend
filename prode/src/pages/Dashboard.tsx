@@ -1088,7 +1088,7 @@ function useLiveMinute(fecha: string, estado: string): string {
     if (estado !== 'en_juego') { setLabel(''); return }
     function calc() {
       const elapsed = (Date.now() - new Date(fecha).getTime()) / 60000
-      if (elapsed < 0) return setLabel('LIVE')
+      if (elapsed < 0) return setLabel("0'")
       if (elapsed <= 45) return setLabel(`${Math.min(45, Math.floor(elapsed))}'`)
       if (elapsed <= 60) return setLabel('HT')
       const min2 = Math.floor(elapsed - 15)
@@ -1151,7 +1151,7 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
         {partido.estado === 'en_juego' ? (
           <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-status-draw uppercase tracking-wider shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-status-draw animate-pulse" />
-            LIVE
+            En vivo
             {minuto && <span className="tabular-nums">{minuto}</span>}
           </span>
         ) : (
