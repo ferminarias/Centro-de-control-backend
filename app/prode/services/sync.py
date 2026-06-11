@@ -393,8 +393,27 @@ def get_live_matches_from_api(api_key: str) -> list[dict]:
     return data
 
 
+# api_ids vistos en vivo en el ciclo anterior — para detectar finales
+_prev_live_ids: set = set()
+
+
 def sync_live_matches(db: Session, api_key: str) -> dict:
+    global _prev_live_ids
     matches = get_live_matches_from_api(api_key)
+    current_ids = {m.get("id") for m in matches if m.get("id")}
+
+    # Un partido salió de la lista de vivos → probablemente terminó:
+    # full sync inmediato para marcarlo finalizado y calcular puntos,
+    # sin esperar al scheduler de 5 minutos
+    ended = _prev_live_ids - current_ids
+    _prev_live_ids = current_ids
+    if ended:
+        logger.info(
+            "Live sync: %d partido(s) salieron del vivo (%s) — full sync para puntuar",
+            len(ended), sorted(ended),
+        )
+        return sync_wc_fixtures(db, api_key)
+
     if not matches:
         return {"en_juego": 0, "actualizados": 0}
 
