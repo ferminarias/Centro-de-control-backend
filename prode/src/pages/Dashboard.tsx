@@ -1,5 +1,5 @@
 import { API } from '../lib/api'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NodisWidget, { type NodisPartidoContext } from '../components/NodisWidget'
 import Flag from '../components/Flag'
@@ -1362,7 +1362,23 @@ function TablaContent({ user, lastUpdate }: { user: ProdeUser; lastUpdate: numbe
   const [tablaEquipos, setTablaEquipos] = useState<ClubTablaEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingEquipos, setLoadingEquipos] = useState(false)
+  const [expandedClub, setExpandedClub] = useState<number | null>(null)
+  const [clubMembers, setClubMembers] = useState<Record<number, ClubMember[]>>({})
   const token = localStorage.getItem('prode_token')
+
+  function toggleClub(clubId: number) {
+    if (expandedClub === clubId) { setExpandedClub(null); return }
+    setExpandedClub(clubId)
+    if (!clubMembers[clubId]) {
+      fetch(API + `/api/prode/equipos/${clubId}/miembros`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => setClubMembers(prev => ({
+          ...prev,
+          [clubId]: (Array.isArray(d) ? d : []).sort((a: ClubMember, b: ClubMember) => b.puntos - a.puntos),
+        })))
+        .catch(() => {})
+    }
+  }
 
   const fetchTabla = useCallback(() => {
     fetch(API + '/api/prode/tabla', { headers: { Authorization: `Bearer ${token}` } })
@@ -1516,23 +1532,74 @@ function TablaContent({ user, lastUpdate }: { user: ProdeUser; lastUpdate: numbe
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {tablaEquipos.map(e => (
-                  <tr key={e.club_id} className="hover:bg-bg-elevated transition-colors">
-                    <td className="px-3 py-3 text-center">
-                      <div className="flex justify-center">
-                        <RankIcon pos={e.posicion} isMe={false} />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-content-primary">{e.nombre}</p>
-                    </td>
-                    <td className="px-3 py-3 text-center text-content-secondary">{e.integrantes}</td>
-                    <td className="px-3 py-3 text-center font-semibold text-content-primary">{e.total_puntos}</td>
-                    <td className="px-3 py-3 text-center">
-                      <span className="font-semibold text-accent">{e.promedio}</span>
-                    </td>
-                  </tr>
-                ))}
+                {tablaEquipos.map(e => {
+                  const isOpen = expandedClub === e.club_id
+                  const ms = clubMembers[e.club_id]
+                  return (
+                    <Fragment key={e.club_id}>
+                      <tr
+                        onClick={() => toggleClub(e.club_id)}
+                        className={`cursor-pointer transition-colors ${isOpen ? 'bg-bg-elevated' : 'hover:bg-bg-elevated'}`}
+                      >
+                        <td className="px-3 py-3 text-center">
+                          <div className="flex justify-center">
+                            <RankIcon pos={e.posicion} isMe={false} />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-content-primary">{e.nombre}</p>
+                            <span className={`text-content-muted text-[9px] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-center text-content-secondary">{e.integrantes}</td>
+                        <td className="px-3 py-3 text-center font-semibold text-content-primary">{e.total_puntos}</td>
+                        <td className="px-3 py-3 text-center">
+                          <span className="font-semibold text-accent">{e.promedio}</span>
+                        </td>
+                      </tr>
+                      {isOpen && (
+                        <tr>
+                          <td colSpan={5} className="p-0">
+                            <div className="bg-bg-base/60 border-y border-border animate-fade-in">
+                              {!ms ? (
+                                <div className="flex items-center justify-center py-6">
+                                  <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                                </div>
+                              ) : ms.length === 0 ? (
+                                <p className="px-4 py-5 text-sm text-content-muted text-center">Sin integrantes</p>
+                              ) : (
+                                <div className="divide-y divide-border/60">
+                                  {ms.map((m, i) => {
+                                    const isMe = m.user_id === user.id
+                                    return (
+                                      <div key={m.user_id} className={`flex items-center gap-3 px-4 py-2.5 pl-6 sm:pl-10 ${isMe ? 'bg-accent-subtle' : ''}`}>
+                                        <span className="text-xs text-content-muted tabular-nums w-4 text-center shrink-0">{i + 1}</span>
+                                        <div className="w-7 h-7 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-[10px] font-semibold text-content-secondary shrink-0 overflow-hidden">
+                                          {m.avatar_url
+                                            ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                            : <>{m.nombre[0]}{m.apellido[0]}</>
+                                          }
+                                        </div>
+                                        <p className={`flex-1 min-w-0 text-sm font-medium truncate ${isMe ? 'text-accent' : 'text-content-primary'}`}>
+                                          {m.nombre} {m.apellido}
+                                          {isMe && <span className="ml-1.5 text-[10px] font-semibold bg-accent/10 text-accent px-1.5 py-0.5 rounded-full">vos</span>}
+                                        </p>
+                                        <span className="text-sm font-semibold text-content-primary tabular-nums shrink-0">
+                                          {m.puntos} <span className="text-[10px] text-content-muted font-normal">pts</span>
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>
