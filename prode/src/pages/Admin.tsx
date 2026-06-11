@@ -312,7 +312,7 @@ export default function Admin() {
         body: JSON.stringify({ es_gerente: !user.es_gerente }),
       })
       await fetchUsers()
-      showToast(user.es_gerente ? 'Rol gerente quitado' : 'Rol gerente asignado — ya puede crear equipos')
+      showToast(user.es_gerente ? 'Rol líder quitado' : 'Rol líder asignado — ya puede crear equipos')
     } catch {
       showToast('Error al actualizar usuario')
     }
@@ -493,9 +493,9 @@ export default function Admin() {
                               ? 'bg-status-draw/10 text-status-draw border border-status-draw/20 hover:bg-status-draw/20'
                               : 'bg-border text-content-muted border border-transparent hover:bg-border-strong'
                           }`}
-                          title={user.es_gerente ? 'Quitar rol gerente' : 'Dar rol gerente (puede crear equipos)'}
+                          title={user.es_gerente ? 'Quitar rol líder' : 'Dar rol líder (puede crear equipos)'}
                         >
-                          {user.es_gerente ? 'Gerente ✓' : 'Gerente'}
+                          {user.es_gerente ? 'Líder ✓' : 'Líder'}
                         </button>
                       </div>
                     </td>

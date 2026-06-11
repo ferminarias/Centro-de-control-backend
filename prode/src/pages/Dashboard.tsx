@@ -1583,7 +1583,7 @@ function TablaContent({ user, lastUpdate }: { user: ProdeUser; lastUpdate: numbe
         ) : tablaEquipos.length === 0 ? (
           <div className="card p-10 text-center">
             <p className="text-content-secondary text-sm">Todavía no hay equipos creados.</p>
-            <p className="text-content-muted text-xs mt-1">Los gerentes pueden crear equipos desde la sección Mi Equipo.</p>
+            <p className="text-content-muted text-xs mt-1">Los líderes pueden crear equipos desde la sección Mi Equipo.</p>
           </div>
         ) : (
           <div className="card overflow-hidden">
@@ -1696,7 +1696,7 @@ function EquipoContent({ user }: { user: ProdeUser }) {
 }
 
 // Admin: gestiona todos los equipos. El primer integrante agregado a un
-// equipo queda automáticamente como gerente (lo asigna el backend).
+// equipo queda automáticamente como líder (lo asigna el backend).
 function AdminEquipos() {
   const [clubs, setClubs] = useState<ClubInfo[]>([])
   const [allUsers, setAllUsers] = useState<AllUser[]>([])
@@ -1754,7 +1754,7 @@ function AdminEquipos() {
       fetchClubs()
       setExpanded(club.id)
       setMiembros(prev => ({ ...prev, [club.id]: [] }))
-      showToast('Equipo creado ✓ — el primer integrante que agregues será el gerente')
+      showToast('Equipo creado ✓ — el primer integrante que agregues será el líder')
     } else {
       const d = await res.json(); showToast(d.detail || 'Error al crear')
     }
@@ -1771,7 +1771,7 @@ function AdminEquipos() {
       fetchMiembros(clubId)
       fetchClubs()
       fetchUsers()
-      showToast(d.gerente_asignado ? 'Agregado ✓ — quedó como gerente del equipo' : 'Miembro agregado ✓')
+      showToast(d.gerente_asignado ? 'Agregado ✓ — quedó como líder del equipo' : 'Miembro agregado ✓')
     } else {
       const d = await res.json(); showToast(d.detail || 'Error')
     }
@@ -1799,7 +1799,7 @@ function AdminEquipos() {
       <div>
         <h1 className="text-xl font-semibold text-content-primary">Equipos</h1>
         <p className="text-sm text-content-secondary mt-0.5">
-          Creá equipos y agregá integrantes — el primero en entrar queda como gerente
+          Creá equipos y agregá integrantes — el primero en entrar queda como líder
         </p>
       </div>
 
@@ -1861,7 +1861,7 @@ function AdminEquipos() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-content-primary truncate">{m.nombre} {m.apellido}</p>
                             {m.user_id === club.gerente_id && (
-                              <p className="text-[10px] text-accent font-semibold">Gerente</p>
+                              <p className="text-[10px] text-accent font-semibold">Líder</p>
                             )}
                           </div>
                           <span className="text-sm font-semibold text-content-primary shrink-0">{m.puntos} pts</span>
@@ -1872,7 +1872,7 @@ function AdminEquipos() {
                       ))}
                       {ms && ms.length === 0 && (
                         <p className="px-4 py-5 text-sm text-content-muted text-center">
-                          Sin integrantes — el primero que agregues será el gerente
+                          Sin integrantes — el primero que agregues será el líder
                         </p>
                       )}
                       {!ms && (
@@ -2042,7 +2042,7 @@ function GerenteEquipo({ user }: { user: ProdeUser }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-content-primary truncate">{m.nombre} {m.apellido}</p>
                     {m.user_id === club.gerente_id && (
-                      <p className="text-[10px] text-accent font-semibold">Gerente</p>
+                      <p className="text-[10px] text-accent font-semibold">Líder</p>
                     )}
                   </div>
                   <span className="text-sm font-semibold text-content-primary shrink-0">{m.puntos} pts</span>
@@ -2076,7 +2076,7 @@ function GerenteEquipo({ user }: { user: ProdeUser }) {
       {!isGerente && !club && (
         <div className="card p-10 text-center">
           <p className="text-content-secondary text-sm">No pertenecés a ningún equipo.</p>
-          <p className="text-content-muted text-xs mt-1">Un gerente debe agregarte a su equipo.</p>
+          <p className="text-content-muted text-xs mt-1">Un líder debe agregarte a su equipo.</p>
         </div>
       )}
 

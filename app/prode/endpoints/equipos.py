@@ -14,7 +14,7 @@ router = APIRouter(tags=["Prode - Equipos"])
 
 def _require_gerente(current_user: ProdeUser = Depends(get_current_prode_user)) -> ProdeUser:
     if not current_user.es_gerente and not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Se requiere rol de gerente")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Se requiere rol de líder")
     return current_user
 
 
@@ -186,7 +186,7 @@ def add_miembro(
     if not club:
         raise HTTPException(status_code=404, detail="Equipo no encontrado")
     if str(club.gerente_id) != str(current_user.id) and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Solo el gerente puede agregar miembros")
+        raise HTTPException(status_code=403, detail="Solo el líder puede agregar miembros")
 
     try:
         user_uuid = uuid_module.UUID(body.user_id)
@@ -231,7 +231,7 @@ def remove_miembro(
     if not club:
         raise HTTPException(status_code=404, detail="Equipo no encontrado")
     if str(club.gerente_id) != str(current_user.id) and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Solo el gerente puede eliminar miembros")
+        raise HTTPException(status_code=403, detail="Solo el líder puede eliminar miembros")
 
     try:
         user_uuid = uuid_module.UUID(user_id)
@@ -242,7 +242,7 @@ def remove_miembro(
     if not user or user.club_id != club_id:
         raise HTTPException(status_code=404, detail="El usuario no es miembro de este equipo")
     if str(user.id) == str(club.gerente_id):
-        raise HTTPException(status_code=400, detail="No se puede eliminar al gerente del equipo")
+        raise HTTPException(status_code=400, detail="No se puede eliminar al líder del equipo")
 
     user.club_id = None
     db.commit()
@@ -259,7 +259,7 @@ def delete_equipo(
     if not club:
         raise HTTPException(status_code=404, detail="Equipo no encontrado")
     if str(club.gerente_id) != str(current_user.id) and not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Solo el gerente puede disolver su equipo")
+        raise HTTPException(status_code=403, detail="Solo el líder puede disolver su equipo")
 
     db.query(ProdeUser).filter(ProdeUser.club_id == club_id).update({"club_id": None})
     db.delete(club)
