@@ -90,10 +90,13 @@ const FASE_LABEL: Record<string, string> = {
   final: 'Final',
 }
 
+// Cambiar a true cuando arranquen los playoffs para mostrar el Cuadro
+const MOSTRAR_CUADRO = false as boolean
+
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', Icon: IconGrid },
   { id: 'fixture', label: 'Fixture', Icon: IconCalendar },
-  { id: 'cuadro', label: 'Cuadro', Icon: IconBracket },
+  ...(MOSTRAR_CUADRO ? [{ id: 'cuadro', label: 'Cuadro', Icon: IconBracket }] : []),
   { id: 'mis-pronos', label: 'Mis Pronósticos', Icon: IconPen },
   { id: 'posiciones', label: 'Posiciones', Icon: IconTrophy },
   { id: 'mi-equipo', label: 'Mi Equipo', Icon: IconTeam, gerenteOnly: true },
@@ -433,7 +436,7 @@ export default function Dashboard() {
         <main className="flex-1 overflow-y-auto p-4 lg:p-6" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))' }}>
           {active === 'dashboard' && <HomeContent user={user} onNavigate={setActive} tz={tz} onNodis={openNodis} lastFixtureUpdate={lastFixtureUpdate} lastTablaUpdate={lastTablaUpdate} />}
           {active === 'fixture' && <FixtureContent user={user} tz={tz} onNodis={openNodis} lastUpdate={lastFixtureUpdate} />}
-          {active === 'cuadro' && <CuadroContent tz={tz} lastUpdate={lastFixtureUpdate} />}
+          {MOSTRAR_CUADRO && active === 'cuadro' && <CuadroContent tz={tz} lastUpdate={lastFixtureUpdate} />}
           {active === 'mis-pronos' && <MisPronosContent user={user} tz={tz} />}
           {active === 'posiciones' && <TablaContent user={user} lastUpdate={lastTablaUpdate} />}
           {active === 'mi-equipo' && <EquipoContent user={user} />}
