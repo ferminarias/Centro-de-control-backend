@@ -119,6 +119,31 @@ def get_tabla_equipos(
     return [ClubTablaEntry(posicion=i + 1, **r) for i, r in enumerate(rows)]
 
 
+@router.patch("/equipos/{club_id}", response_model=ClubResponse)
+def rename_equipo(
+    club_id: int,
+    body: ClubCreate,
+    db: Session = Depends(get_db),
+    current_user: ProdeUser = Depends(get_current_prode_user),
+) -> ProdeClub:
+    """Renombrar un equipo — solo administradores (los líderes no pueden)."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo un administrador puede renombrar equipos",
+        )
+    club = db.query(ProdeClub).filter(ProdeClub.id == club_id).first()
+    if not club:
+        raise HTTPException(status_code=404, detail="Equipo no encontrado")
+    if not body.nombre.strip():
+        raise HTTPException(status_code=422, detail="El nombre no puede estar vacío")
+
+    club.nombre = body.nombre.strip()
+    db.commit()
+    db.refresh(club)
+    return club
+
+
 @router.get("/equipos/usuarios-disponibles")
 def list_usuarios_disponibles(
     db: Session = Depends(get_db),

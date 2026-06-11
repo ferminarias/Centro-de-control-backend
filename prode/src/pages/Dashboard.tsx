@@ -1730,6 +1730,7 @@ function AdminEquipos() {
   const [miembros, setMiembros] = useState<Record<number, ClubMember[]>>({})
   const [expanded, setExpanded] = useState<number | null>(null)
   const [newNombre, setNewNombre] = useState('')
+  const [renameNombre, setRenameNombre] = useState('')
   const [addUserId, setAddUserId] = useState('')
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -1767,7 +1768,17 @@ function AdminEquipos() {
     setAddUserId('')
     if (expanded === clubId) { setExpanded(null); return }
     setExpanded(clubId)
+    setRenameNombre(clubs.find(c => c.id === clubId)?.nombre ?? '')
     fetchMiembros(clubId)
+  }
+
+  async function handleRename(clubId: number) {
+    if (!renameNombre.trim()) return
+    setSaving(true)
+    const res = await fetch(API + `/api/prode/equipos/${clubId}`, { method: 'PATCH', headers, body: JSON.stringify({ nombre: renameNombre.trim() }) })
+    setSaving(false)
+    if (res.ok) { fetchClubs(); showToast('Nombre actualizado ✓') }
+    else { const d = await res.json(); showToast(d.detail || 'Error al renombrar') }
   }
 
   async function handleCreate() {
@@ -1915,6 +1926,25 @@ function AdminEquipos() {
                         saving={saving}
                         onAdd={() => handleAdd(club.id)}
                       />
+
+                      {/* Renombrar — solo admins llegan a esta vista */}
+                      <div className="flex gap-2">
+                        <input
+                          value={renameNombre}
+                          onChange={e => setRenameNombre(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleRename(club.id)}
+                          placeholder="Nuevo nombre del equipo"
+                          className="flex-1 bg-bg-elevated text-content-primary text-base sm:text-sm rounded-xl px-3 py-2.5 border border-border focus:outline-none focus:border-accent/50 placeholder:text-content-muted transition-colors"
+                        />
+                        <button
+                          onClick={() => handleRename(club.id)}
+                          disabled={!renameNombre.trim() || renameNombre.trim() === club.nombre || saving}
+                          className="px-4 py-2.5 bg-bg-elevated border border-border text-content-secondary hover:text-content-primary hover:border-border-strong text-sm font-semibold rounded-xl disabled:opacity-40 transition-colors shrink-0"
+                        >
+                          Renombrar
+                        </button>
+                      </div>
+
                       <button
                         onClick={() => handleDisolve(club)}
                         className="self-start text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors border border-red-500/20"
