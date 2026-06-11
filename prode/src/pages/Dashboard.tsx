@@ -773,42 +773,52 @@ function LiveMatchCard({ partido }: { partido: Partido }) {
 function PartidoCardCompact({ partido, tz, onNodis }: { partido: Partido; tz: string; onNodis?: (p: Partido) => void }) {
   const { date, time } = formatFecha(partido.fecha, tz)
   return (
-    <div className="card p-4 flex items-center gap-4">
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        {partido.equipo_local && (
-          <>
-            <Flag codigo={partido.equipo_local.codigo_iso} className="w-5 rounded-sm shrink-0" />
-            <span className="text-sm text-content-primary font-medium truncate">{partido.equipo_local.nombre}</span>
-          </>
+    <div className="card p-4 flex flex-col gap-2.5">
+      {/* Meta: fecha/hora según región · grupo */}
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-[11px] text-content-secondary capitalize shrink-0">{date} · {time}</span>
+        {partido.grupo && (
+          <span className="text-[10px] font-semibold text-content-secondary bg-bg-elevated border border-border rounded-full px-2 py-0.5 shrink-0">
+            Grupo {partido.grupo}
+          </span>
+        )}
+        <span className="flex-1" />
+        {onNodis && partido.equipo_local && partido.equipo_visitante && (
+          <button
+            onClick={() => onNodis(partido)}
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg text-content-muted hover:text-accent hover:bg-accent/10 transition-colors"
+            title="Consultar Oráculo Nodis"
+          >
+            <IconWand />
+          </button>
         )}
       </div>
-      <div className="text-center shrink-0 px-2">
-        <p className="text-[10px] font-semibold text-content-muted uppercase tracking-wider">VS</p>
-        {partido.mi_prediccion && (
-          <p className="text-[10px] text-accent font-semibold mt-0.5">
-            {partido.mi_prediccion.goles_local}-{partido.mi_prediccion.goles_visitante}
-          </p>
-        )}
+
+      {/* Equipos */}
+      <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {partido.equipo_local && (
+            <>
+              <Flag codigo={partido.equipo_local.codigo_iso} className="w-5 rounded-sm shrink-0" />
+              <span className="text-[13px] sm:text-sm text-content-primary font-medium leading-tight">{partido.equipo_local.nombre}</span>
+            </>
+          )}
+        </div>
+        <div className="text-center shrink-0 px-2">
+          <p className="text-[10px] font-semibold text-content-muted uppercase tracking-wider">VS</p>
+          {partido.mi_prediccion && (
+            <p className="text-[10px] text-accent font-semibold mt-0.5">
+              {partido.mi_prediccion.goles_local}-{partido.mi_prediccion.goles_visitante}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+          <span className="text-[13px] sm:text-sm text-content-primary font-medium leading-tight text-right">{partido.equipo_visitante?.nombre}</span>
+          {partido.equipo_visitante && (
+            <Flag codigo={partido.equipo_visitante.codigo_iso} className="w-5 rounded-sm shrink-0" />
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-        <span className="text-sm text-content-primary font-medium truncate">{partido.equipo_visitante?.nombre}</span>
-        {partido.equipo_visitante && (
-          <Flag codigo={partido.equipo_visitante.codigo_iso} className="w-5 rounded-sm shrink-0" />
-        )}
-      </div>
-      <div className="text-right shrink-0 border-l border-border pl-4 hidden sm:block">
-        <p className="text-xs text-content-secondary capitalize">{date}</p>
-        <p className="text-xs text-content-muted">{time}</p>
-      </div>
-      {onNodis && partido.equipo_local && partido.equipo_visitante && (
-        <button
-          onClick={() => onNodis(partido)}
-          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-content-muted hover:text-accent hover:bg-accent/10 transition-colors"
-          title="Consultar Oráculo Nodis"
-        >
-          <IconWand />
-        </button>
-      )}
     </div>
   )
 }
@@ -1122,28 +1132,43 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
   }
 
   return (
-    <div className={`px-4 py-4 flex items-center gap-3 ${partido.estado === 'en_juego' ? 'bg-status-draw/5' : ''} ${esPostergado || esCancelado ? 'opacity-50' : ''}`}>
-      {/* Fecha / minuto */}
-      <div className="w-20 shrink-0 hidden sm:block text-center">
+    <div className={`px-4 py-3.5 flex flex-col gap-2.5 ${partido.estado === 'en_juego' ? 'bg-status-draw/5' : ''} ${esPostergado || esCancelado ? 'opacity-50' : ''}`}>
+      {/* Meta: fecha/hora según región · grupo · estadio · live */}
+      <div className="flex items-center gap-2 min-w-0">
         {partido.estado === 'en_juego' ? (
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-status-draw uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-status-draw animate-pulse" />
-              LIVE
-            </span>
-            {minuto && <span className="text-xs font-semibold text-status-draw tabular-nums">{minuto}</span>}
-          </div>
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-status-draw uppercase tracking-wider shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-status-draw animate-pulse" />
+            LIVE
+            {minuto && <span className="tabular-nums">{minuto}</span>}
+          </span>
         ) : (
-          <>
-            <p className="text-xs text-content-secondary capitalize leading-tight">{date}</p>
-            <p className="text-xs text-content-muted">{time}</p>
-          </>
+          <span className="text-[11px] text-content-secondary capitalize shrink-0">{date} · {time}</span>
+        )}
+        {partido.grupo && (
+          <span className="text-[10px] font-semibold text-content-secondary bg-bg-elevated border border-border rounded-full px-2 py-0.5 shrink-0">
+            Grupo {partido.grupo}
+          </span>
+        )}
+        {partido.estadio && (
+          <span className="text-[10px] text-content-muted truncate hidden sm:inline">{partido.estadio}</span>
+        )}
+        <span className="flex-1" />
+        {onNodis && partido.equipo_local && partido.equipo_visitante && (
+          <button
+            onClick={() => onNodis(partido)}
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg text-content-muted hover:text-accent hover:bg-accent/10 transition-colors"
+            title="Consultar Oráculo Nodis"
+          >
+            <IconWand />
+          </button>
         )}
       </div>
 
+      {/* Equipos + marcador */}
+      <div className="flex items-center gap-2.5">
       {/* Local */}
       <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-        <span className="text-sm text-content-primary font-medium truncate text-right">
+        <span className="text-[13px] sm:text-sm text-content-primary font-medium text-right leading-tight">
           {partido.equipo_local?.nombre ?? '?'}
         </span>
         <Flag codigo={partido.equipo_local?.codigo_iso ?? ''} className="w-6 rounded-sm shrink-0" />
@@ -1224,27 +1249,11 @@ function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave
       {/* Visitante */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <Flag codigo={partido.equipo_visitante?.codigo_iso ?? ''} className="w-6 rounded-sm shrink-0" />
-        <span className="text-sm text-content-primary font-medium truncate">
+        <span className="text-[13px] sm:text-sm text-content-primary font-medium leading-tight">
           {partido.equipo_visitante?.nombre ?? '?'}
         </span>
       </div>
-
-      {/* Estadio */}
-      <div className="w-24 shrink-0 hidden lg:block">
-        <p className="text-[11px] text-content-muted truncate">{partido.estadio ?? ''}</p>
       </div>
-
-      {/* Oracle button */}
-      {onNodis && partido.equipo_local && partido.equipo_visitante && (
-        <button
-          onClick={() => onNodis(partido)}
-          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-content-muted hover:text-accent hover:bg-accent/10 transition-colors"
-          title="Consultar Oráculo Nodis"
-        >
-          <IconWand />
-        </button>
-      )}
-
     </div>
   )
 }
