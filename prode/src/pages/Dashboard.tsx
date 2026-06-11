@@ -1,5 +1,5 @@
 import { API } from '../lib/api'
-import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment, type Dispatch, type SetStateAction } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NodisWidget, { type NodisPartidoContext } from '../components/NodisWidget'
 import Flag from '../components/Flag'
@@ -166,6 +166,57 @@ function useProdeSSE(onEvent: (event: string) => void) {
       controller.abort()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+// ── Live polling hook ─────────────────────────────────────────────────────────
+
+/**
+ * While any match is en_juego, polls /partidos/live every 60 s and merges
+ * ONLY goles/estado into the existing list. The rest of each Partido object
+ * (incluida mi_prediccion) keeps its identity, so open inputs and the UI
+ * never flicker or reset. When a live match disappears from the response
+ * (terminó), triggers a full refetch to pick up estado final y puntos.
+ */
+function useLivePolling(
+  partidos: Partido[],
+  setPartidos: Dispatch<SetStateAction<Partido[]>>,
+  refetchAll: () => void,
+) {
+  const hayEnVivo = partidos.some(p => p.estado === 'en_juego')
+  const refetchRef = useRef(refetchAll)
+  useEffect(() => { refetchRef.current = refetchAll })
+
+  useEffect(() => {
+    if (!hayEnVivo) return
+    const token = localStorage.getItem('prode_token')
+    let cancelled = false
+    const prevLiveIds = new Set<number>()
+
+    const tick = () => {
+      fetch(API + '/api/prode/partidos/live', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => (r.ok ? r.json() : []))
+        .then((live: Partido[]) => {
+          if (cancelled || !Array.isArray(live)) return
+          const ids = new Set(live.map(l => l.id))
+          const terminoAlguno = [...prevLiveIds].some(id => !ids.has(id))
+          prevLiveIds.clear()
+          ids.forEach(id => prevLiveIds.add(id))
+          if (terminoAlguno) { refetchRef.current(); return }
+          if (live.length === 0) return
+          setPartidos(prev => prev.map(p => {
+            const upd = live.find(l => l.id === p.id)
+            if (!upd) return p
+            if (upd.goles_local === p.goles_local && upd.goles_visitante === p.goles_visitante && upd.estado === p.estado) return p
+            return { ...p, goles_local: upd.goles_local, goles_visitante: upd.goles_visitante, estado: upd.estado }
+          }))
+        })
+        .catch(() => {})
+    }
+
+    tick()
+    const id = setInterval(tick, 60_000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [hayEnVivo]) // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -463,6 +514,9 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
   // SSE-triggered immediate refetch
   useEffect(() => { if (lastFixtureUpdate) fetchPartidos() }, [lastFixtureUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (lastTablaUpdate) fetchTabla() }, [lastTablaUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Goles en vivo cada 60 s mientras haya partidos en juego
+  useLivePolling(partidos, setPartidos, fetchPartidos)
 
   useEffect(() => {
     fetch(API + '/api/prode/apuesta-ganador', { headers })
@@ -800,6 +854,9 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
   // SSE-triggered immediate refetch
   useEffect(() => { if (lastUpdate) fetchPartidos() }, [lastUpdate]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Goles en vivo cada 60 s mientras haya partidos en juego
+  useLivePolling(partidos, setPartidos, fetchPartidos)
+
   async function savePred(partidoId: number, gl: number, gv: number) {
     try {
       const res = await fetch(API + '/api/prode/predicciones', {
@@ -865,7 +922,7 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
       {hayEnVivo && (
         <div className="flex items-center gap-2 bg-status-draw/8 border border-status-draw/20 rounded-xl px-4 py-2.5">
           <span className="w-2 h-2 rounded-full bg-status-draw animate-pulse shrink-0" />
-          <p className="text-xs font-semibold text-status-draw">Partidos en vivo — actualizando cada 30s</p>
+          <p className="text-xs font-semibold text-status-draw">Partidos en vivo — resultados actualizados cada minuto</p>
         </div>
       )}
 
@@ -1022,7 +1079,7 @@ function useLiveMinute(fecha: string, estado: string): string {
   return label
 }
 
-const LOCK_MINUTES = 30
+const LOCK_MINUTES = 15
 
 function PartidoRow({ partido, onSave, tz, onNodis }: { partido: Partido; onSave: (id: number, gl: number, gv: number) => void; tz: string; onNodis?: (p: Partido) => void }) {
   const { date, time } = formatFecha(partido.fecha, tz)

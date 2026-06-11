@@ -10,7 +10,7 @@ from app.prode.schemas import PrediccionConPartidoResponse, PrediccionRequest, P
 
 router = APIRouter(tags=["Prode - Predicciones"])
 
-LOCK_MINUTES = 30
+LOCK_MINUTES = 15
 
 
 @router.post("/predicciones", response_model=PrediccionResponse, status_code=status.HTTP_200_OK)
