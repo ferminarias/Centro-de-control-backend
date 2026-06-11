@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import * as Flags from 'country-flag-icons/react/3x2'
+import Flag from './Flag'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 // Structural subset of Dashboard's Partido — anything with these fields works.
@@ -46,12 +46,6 @@ const TOTAL_W = colX(8) + CARD_W + PAD_X
 const TOTAL_H = PAD_TOP + 8 * CARD_H + 7 * ROW_GAP + 24
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function Flag({ codigo, className }: { codigo: string; className?: string }) {
-  const FlagComp = (Flags as Record<string, React.ComponentType<{ className?: string }>>)[codigo]
-  if (!FlagComp) return <span className={`inline-block bg-border rounded-sm ${className ?? 'w-5'}`} />
-  return <FlagComp className={className ?? 'w-5 rounded-sm'} />
-}
 
 type Lado = 'local' | 'visitante'
 

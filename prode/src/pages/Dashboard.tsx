@@ -1,8 +1,8 @@
 import { API } from '../lib/api'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import * as Flags from 'country-flag-icons/react/3x2'
 import NodisWidget, { type NodisPartidoContext } from '../components/NodisWidget'
+import Flag from '../components/Flag'
 import BracketView from '../components/BracketView'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -100,12 +100,6 @@ const NAV = [
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function Flag({ codigo, className }: { codigo: string; className?: string }) {
-  const FlagComp = (Flags as Record<string, React.ComponentType<{ className?: string }>>)[codigo]
-  if (!FlagComp) return <span className={`inline-block bg-border rounded-sm ${className ?? 'w-5'}`} />
-  return <FlagComp className={className ?? 'w-5 rounded-sm'} />
-}
 
 function formatFecha(iso: string, tz: string = DEFAULT_TZ) {
   const d = new Date(iso)
