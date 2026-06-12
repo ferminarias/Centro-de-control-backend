@@ -855,7 +855,8 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
-  const [grupoActivo, setGrupoActivo] = useState<string | 'eliminatorias'>('A')
+  const [grupoActivo, setGrupoActivo] = useState<string | 'eliminatorias' | 'fechas'>('fechas')
+  const [verAnteriores, setVerAnteriores] = useState(false)
   const [toast, setToast] = useState('')
   const token = localStorage.getItem('prode_token')
 
@@ -924,6 +925,25 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
 
   const eliminatoriasFases = ['r32', 'r16', 'cuartos', 'semis', 'tercero', 'final']
 
+  // Vista por fecha: todos los partidos en orden de juego, agrupados por día
+  // (en la zona horaria elegida). Los días ya jugados quedan colapsados.
+  const diasMap = new Map<string, { label: string; items: Partido[] }>()
+  for (const p of [...partidos].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime() || a.id - b.id)) {
+    const d = new Date(p.fecha)
+    const key = d.toLocaleDateString('en-CA', { timeZone: tz })
+    if (!diasMap.has(key)) {
+      diasMap.set(key, {
+        label: d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz }),
+        items: [],
+      })
+    }
+    diasMap.get(key)!.items.push(p)
+  }
+  const hoyKey = new Date().toLocaleDateString('en-CA', { timeZone: tz })
+  const dias = [...diasMap.entries()].map(([key, v]) => ({ key, ...v }))
+  const diasPasados = dias.filter(d => d.key < hoyKey)
+  const diasActuales = dias.filter(d => d.key >= hoyKey)
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -953,8 +973,21 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
 
   return (
     <div className="flex flex-col gap-4 animate-slide-up">
-      {/* Tabs grupos / eliminatorias */}
+      {/* Tabs por fecha / grupos / eliminatorias */}
       <div className="flex gap-1 flex-wrap">
+        <button
+          onClick={() => setGrupoActivo('fechas')}
+          className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors mr-1 ${
+            grupoActivo === 'fechas'
+              ? 'bg-accent text-white'
+              : 'bg-bg-surface text-content-muted hover:text-content-primary border border-border'
+          }`}
+        >
+          Por fecha
+          {partidos.some(p => p.estado === 'en_juego') && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-status-draw rounded-full border border-bg-base" />
+          )}
+        </button>
         {GRUPOS.map(g => {
           const tieneEnVivo = partidos.some(p => p.grupo === g && p.estado === 'en_juego')
           return (
@@ -987,7 +1020,40 @@ function FixtureContent({ tz, onNodis, lastUpdate }: { user: ProdeUser; tz: stri
       </div>
 
       {/* Partidos */}
-      {grupoActivo !== 'eliminatorias' ? (
+      {grupoActivo === 'fechas' ? (
+        <div className="flex flex-col gap-4">
+          {diasPasados.length > 0 && (
+            <button
+              onClick={() => setVerAnteriores(v => !v)}
+              className="self-start text-xs font-semibold text-content-muted hover:text-content-primary px-3 py-1.5 rounded-lg border border-border hover:border-border-strong bg-bg-surface transition-colors"
+            >
+              {verAnteriores
+                ? 'Ocultar partidos anteriores'
+                : `Ver partidos anteriores (${diasPasados.reduce((s, d) => s + d.items.length, 0)})`}
+            </button>
+          )}
+          {(verAnteriores ? dias : diasActuales).map(dia => (
+            <div key={dia.key} className="card overflow-hidden">
+              <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                <p className="text-sm font-semibold text-content-primary capitalize">{dia.label}</p>
+                {dia.key === hoyKey && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-accent/10 text-accent">Hoy</span>
+                )}
+              </div>
+              <div className="divide-y divide-border">
+                {dia.items.map(p => (
+                  <PartidoRow key={p.id} partido={p} onSave={savePred} tz={tz} onNodis={onNodis} />
+                ))}
+              </div>
+            </div>
+          ))}
+          {diasActuales.length === 0 && !verAnteriores && (
+            <div className="card p-8 text-center">
+              <p className="text-content-muted text-sm">No quedan partidos por jugar.</p>
+            </div>
+          )}
+        </div>
+      ) : grupoActivo !== 'eliminatorias' ? (
         <div className="card overflow-hidden">
           <div className="px-4 py-3 border-b border-border">
             <p className="text-sm font-semibold text-content-primary">Grupo {grupoActivo}</p>
