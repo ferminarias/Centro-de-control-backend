@@ -502,7 +502,7 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
   const token = localStorage.getItem('prode_token')
   const headers = { Authorization: `Bearer ${token}` }
 
-  const DEADLINE_GANADOR = new Date('2026-06-15T23:59:59Z')
+  const DEADLINE_GANADOR = new Date('2026-06-28T23:59:59Z')
   const ganadorCerrado = new Date() > DEADLINE_GANADOR
 
   const fetchPartidos = useCallback(() => {
@@ -635,7 +635,7 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
 
           {ganadorCerrado ? (
             <div>
-              <p className="text-xs text-content-muted mb-2">Plazo cerrado · 15 de junio</p>
+              <p className="text-xs text-content-muted mb-2">Plazo cerrado · 28 de junio</p>
               {apuestaGanador ? (
                 <div className="flex items-center gap-2">
                   <Flag codigo={apuestaGanador.equipo.codigo_iso} className="w-5 rounded-sm shrink-0" />
@@ -651,7 +651,7 @@ function HomeContent({ user, onNavigate, tz, onNodis, lastFixtureUpdate, lastTab
           ) : (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-content-muted">
-                {apuestaGanador ? `Tu apuesta: ${apuestaGanador.equipo.nombre} · podés cambiarla hasta el 15/06` : 'Apostá al campeón antes del 15 de junio'}
+                {apuestaGanador ? `Tu apuesta: ${apuestaGanador.equipo.nombre} · podés cambiarla hasta el 28/06` : 'Apostá al campeón antes del 28 de junio'}
               </p>
               <div className="flex gap-2">
                 <select

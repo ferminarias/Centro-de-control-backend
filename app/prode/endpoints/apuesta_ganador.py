@@ -16,7 +16,7 @@ from app.prode.schemas import (
 
 router = APIRouter(tags=["Prode - Apuesta Ganador"])
 
-DEADLINE = datetime(2026, 6, 15, 23, 59, 59, tzinfo=timezone.utc)
+DEADLINE = datetime(2026, 6, 28, 23, 59, 59, tzinfo=timezone.utc)
 PUNTOS_GANADOR = 25
 
 
