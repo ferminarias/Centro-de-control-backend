@@ -192,10 +192,19 @@ def _parse_match(m: dict, equipos_by_api_id: dict, equipos_by_name: dict, db: Se
 
     score = m.get("score", {}) or {}
     ft = score.get("fullTime", {}) or {}
+    reg = score.get("regularTime") or {}
+    et = score.get("extraTime") or {}
     goles_local = ft.get("home")
     goles_visitante = ft.get("away")
-    if goles_local is None and api_status in ("IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"):
-        reg = score.get("regularTime", {}) or {}
+    # Eliminación con alargue/penales: la API deja en regularTime el marcador de
+    # los 90' y en extraTime SÓLO los goles del suplementario. fullTime, en
+    # cambio, suma la tanda de penales (un 1-1 definido 4-2 llega como 5-3). Para
+    # el prode y el resultado "real" cuenta el marcador de los 120' sin la tanda,
+    # así que reconstruimos regularTime + extraTime cuando hay tiempo extra.
+    if reg.get("home") is not None:
+        goles_local = reg.get("home") + (et.get("home") or 0)
+        goles_visitante = reg.get("away") + (et.get("away") or 0)
+    elif goles_local is None and api_status in ("IN_PLAY", "PAUSED", "EXTRA_TIME", "PENALTY_SHOOTOUT"):
         goles_local = reg.get("home")
         goles_visitante = reg.get("away")
 
